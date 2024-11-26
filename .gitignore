@@ -1,0 +1,10 @@
+/.vscode/
+/node_modules
+.env
+npm-debug.log
+logs
+/dist
+xarme.zip
+start.sh
+deploy.sh
+prmp.md

@@ -15,8 +15,8 @@
     "dotenv": "^16.4.5",
     "ethers": "^6.13.4",
     "express": "^4.21.1",
+    "mongoose": "^8.8.2",
     "node-cron": "^3.0.3",
-     "mysql2": "^3.11.4",
     "node-telegram-bot-api": "^0.66.0"
   }
 }
