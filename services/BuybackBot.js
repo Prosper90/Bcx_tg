@@ -127,6 +127,8 @@ class BuybackBot {
   }
 
   async handleAddressSubmission(chatId, address) {
+    console.log("starting tx, 1");
+
     // Store user's USDT address
     this.activeUsers.set(chatId, {
       usdtAddress: address,
@@ -140,17 +142,20 @@ class BuybackBot {
         I'll notify you once the transaction is detected and processed.
       `;
     await this.telegramBot.sendMessage(chatId, message);
+    console.log("starting tx, 2");
     this.startListening();
   }
 
   async processBuyback(sender, amount, chatId) {
     try {
+      console.log("gotten inside 1");
       const bcxAmount = Number(formatEther(amount));
       if (bcxAmount > this.config.buybackConfig.maxSwapSize) {
         await this.telegramBot.sendMessage(
           chatId,
           "Exceeds maximum swap size, we would send back your bcx"
         );
+        console.log("gotten inside 2");
 
         // Send USDT
         const tx = await this.bcxContract.transfer(
@@ -165,20 +170,20 @@ class BuybackBot {
         );
         return;
       }
-
+      console.log("gotten inside 3");
       const usdtAmount =
         bcxAmount *
         this.config.buybackConfig.pricePerBcx *
         (1 - this.config.buybackConfig.fee);
 
       const userData = this.activeUsers.get(chatId);
-      console.error(4);
+      console.log(4);
 
       // Check if the address exists in the database and count transactions
       const transactionCount = await this.connection.countDocuments({
         address: sender,
       });
-
+      console.log("gotten inside 5");
       if (transactionCount >= 5) {
         await this.telegramBot.sendMessage(
           chatId,
@@ -186,12 +191,15 @@ class BuybackBot {
         );
         return;
       } else {
+        console.log("transfering, 1");
         // Send USDT
         const tx = await this.usdtContract.transfer(
           userData.usdtAddress,
           parseEther(usdtAmount.toString())
         );
         await tx.wait();
+
+        console.log("transfering, 2");
 
         // Update totals and notify success
         this.totalBcxBought += bcxAmount;
@@ -225,6 +233,7 @@ class BuybackBot {
       if (!chatId) return;
 
       try {
+        console.log("finalizing");
         const message = `🔄 Payment detected, processinig`;
         await this.telegramBot.sendMessage(chatId, message);
         await this.processBuyback(from, amount, chatId);
