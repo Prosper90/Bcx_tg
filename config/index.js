@@ -11,6 +11,7 @@ const config = {
   discordWebhook: process.env.DISCORD_WEBHOOK_URL,
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN,
   ngrok_url: process.env.NGROK_URL,
+  mongoUri: process.env.MONGODB_URI,
   buybackConfig: {
     pricePerBcx: 0.5,
     maxSwapSize: 300,

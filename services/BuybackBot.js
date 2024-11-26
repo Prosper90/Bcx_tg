@@ -90,32 +90,40 @@ class BuybackBot {
   }
 
   async handleInfoCommand(chatId) {
-      try {
-          
-        // const status = this.getStatus();
-        // Query the database to calculate the total BCX bought (sum of bcx_sent)
-        const [rows] = await this.connection.query(
-          "SELECT SUM(CAST(bcx_sent AS UNSIGNED)) AS totalBcxBought FROM transactions"
-        );
-        
-        // Get the total BCX bought, default to 0 if there are no transactions
-        const totalBcxBought = rows[0].totalBcxBought || 0;
-    
-        // Calculate the remaining BCX based on the total BCX limit
-        const remainingBcx = this.config.buybackConfig.totalBcxLimit - totalBcxBought;
-    
-        const message = `
+    try {
+      // Query the database to calculate the total BCX bought (sum of bcx_sent)
+      const totalResult = await this.connection.aggregate([
+        {
+          $group: {
+            _id: null,
+            totalBcxBought: { $sum: { $toDouble: "$bcx_sent" } },
+          },
+        },
+      ]);
+
+      // Get the total BCX bought, default to 0 if there are no transactions
+      const totalBcxBought =
+        totalResult.length > 0 ? totalResult[0].totalBcxBought : 0;
+
+      // Calculate the remaining BCX based on the total BCX limit
+      const remainingBcx =
+        this.config.buybackConfig.totalBcxLimit - totalBcxBought;
+
+      const message = `
           📊 Current Buyback Status:
           • Total BCX Bought: ${totalBcxBought}
           • Remaining BCX: ${remainingBcx}
           • Current Price: $${this.config.buybackConfig.pricePerBcx}
           • Maximum Transaction: ${this.config.buybackConfig.maxSwapSize} BCX
     `;
-        await this.telegramBot.sendMessage(chatId, message);
-      } catch(e) {
-          console.error("Sending out info command", e);
-          await this.telegramBot.sendMessage(chatId, "Error retrieving buyback information.");
-      }
+      await this.telegramBot.sendMessage(chatId, message);
+    } catch (e) {
+      console.error("Sending out info command", e);
+      await this.telegramBot.sendMessage(
+        chatId,
+        "Error retrieving buyback information."
+      );
+    }
   }
 
   async handleAddressSubmission(chatId, address) {
@@ -137,59 +145,72 @@ class BuybackBot {
 
   async processBuyback(sender, amount, chatId) {
     try {
-        
-        const bcxAmount = Number(formatEther(amount));
-        if (bcxAmount > this.config.buybackConfig.maxSwapSize) {
-              await this.telegramBot.sendMessage(chatId, "Exceeds maximum swap size, we would send back your bcx");
-            
-              // Send USDT
-              const tx = await this.bcxContract.transfer(userData.usdtAddress, parseEther(bcxAmount.toString()));
-              await tx.wait();
-              
-              await this.telegramBot.sendMessage(chatId, "Your Bcx has been sent back");
-           return;
-        }
-        
-        const usdtAmount = bcxAmount * this.config.buybackConfig.pricePerBcx * (1 - this.config.buybackConfig.fee);
-          
-        const userData = this.activeUsers.get(chatId);
-        console.error(4);
-        
-        // Check if the address exists in the database
-        const [rows] = await this.connection.query(
-          "SELECT COUNT(*) AS count FROM transactions WHERE address = ?",
-          [sender]
+      const bcxAmount = Number(formatEther(amount));
+      if (bcxAmount > this.config.buybackConfig.maxSwapSize) {
+        await this.telegramBot.sendMessage(
+          chatId,
+          "Exceeds maximum swap size, we would send back your bcx"
         );
-        
-       const addressCount = rows[0].count;
-        
 
-        if (addressCount >= 5) {
-         await this.telegramBot.sendMessage(chatId, "You have passed your swap limit");
-         return;
-        } else {
-        
-          // Send USDT
-          const tx = await this.usdtContract.transfer(userData.usdtAddress, parseEther(usdtAmount.toString()));
-          await tx.wait();
-    
-          // Update totals and notify success
-          this.totalBcxBought += bcxAmount;
-    
-          const message = ` tx: ${tx.hash}, converted: ${bcxAmount} BCX, to ${usdtAmount} USDT,
+        // Send USDT
+        const tx = await this.bcxContract.transfer(
+          userData.usdtAddress,
+          parseEther(bcxAmount.toString())
+        );
+        await tx.wait();
+
+        await this.telegramBot.sendMessage(
+          chatId,
+          "Your Bcx has been sent back"
+        );
+        return;
+      }
+
+      const usdtAmount =
+        bcxAmount *
+        this.config.buybackConfig.pricePerBcx *
+        (1 - this.config.buybackConfig.fee);
+
+      const userData = this.activeUsers.get(chatId);
+      console.error(4);
+
+      // Check if the address exists in the database and count transactions
+      const transactionCount = await this.connection.countDocuments({
+        address: sender,
+      });
+
+      if (transactionCount >= 5) {
+        await this.telegramBot.sendMessage(
+          chatId,
+          "You have passed your swap limit"
+        );
+        return;
+      } else {
+        // Send USDT
+        const tx = await this.usdtContract.transfer(
+          userData.usdtAddress,
+          parseEther(usdtAmount.toString())
+        );
+        await tx.wait();
+
+        // Update totals and notify success
+        this.totalBcxBought += bcxAmount;
+
+        const message = ` tx: ${tx.hash}, converted: ${bcxAmount} BCX, to ${usdtAmount} USDT,
           `;
-          await this.telegramBot.sendMessage(chatId, message);
-          
-          // Remove the specific listener
-          this.bcxContract.removeListener("Transfer", transferListener);
-          
-        // Create a new record for the user
-          await this.connection.query(
-            "INSERT INTO transactions (address, bcx_sent, usdt_recieved) VALUES (?, ?, ?)",
-            [sender, String(bcxAmount), String(usdtAmount)]
-          );
-        }
-        
+        await this.telegramBot.sendMessage(chatId, message);
+
+        // Remove the specific listener
+        this.bcxContract.removeListener("Transfer", transferListener);
+
+        // Create a new record for the transaction
+        const transaction = new this.connection({
+          address: sender,
+          bcx_sent: String(bcxAmount),
+          usdt_received: String(usdtAmount),
+        });
+        await transaction.save();
+      }
     } catch (error) {
       console.error(error);
     }

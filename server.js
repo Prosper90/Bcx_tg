@@ -3,54 +3,50 @@ const express = require("express");
 const config = require("./config");
 const { BuybackBot } = require("./services/BuybackBot");
 const { setupWebhook } = require("./utils/setup-webhook");
-const mysql = require("mysql2/promise");
+const mongoose = require("mongoose");
 
 const app = express();
 app.use(express.json());
 
-
-
-// Function to connect to the MySQL database
+// MongoDB Connection
 const connectToDatabase = async () => {
   try {
-    const connection = await mysql.createConnection({
-      host: 'localhost',
-      user: 'tradalak_newbot',
-      password: 'TelegramNewBot3*',
-      database: 'tradalak_tgapp',
+    await mongoose.connect(config.mongoUri, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
     });
-    console.log("Connected to the MySQL database.");
-    return connection; // Return connection for further use
+    console.log("Connected to the MongoDB database.");
   } catch (error) {
-    console.error("Error connecting to the database:", error.message);
-    process.exit(1); // Exit if database connection fails
+    console.error("Error connecting to the MongoDB database:", error.message);
+    process.exit(1);
   }
 };
 
+// Mongoose Schema and Model
+const transactionSchema = new mongoose.Schema(
+  {
+    address: { type: String, required: true },
+    bcx_sent: { type: String, required: true },
+    usdt_received: { type: String, required: true },
+  },
+  { timestamps: true } // Automatically add `createdAt` and `updatedAt`
+);
+const Transaction = mongoose.model("Transaction", transactionSchema);
 
-// Function to create the table if it doesn't exist
-const createTable = async (connection) => {
-  const createTableQuery = `
-    CREATE TABLE IF NOT EXISTS transactions (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      address VARCHAR(255) NOT NULL,
-      bcx_sent VARCHAR(255) NOT NULL,
-      usdt_recieved VARCHAR(255) NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    );
-  `;
-
+// Example function to ensure database logic works
+const createSampleTransaction = async () => {
   try {
-    await connection.query(createTableQuery);
-    console.log("Table 'transactions' ensured to exist.");
+    const sampleTransaction = new Transaction({
+      address: "sample_address",
+      bcx_sent: "100",
+      usdt_received: "50",
+    });
+    await sampleTransaction.save();
+    console.log("Sample transaction saved to MongoDB.");
   } catch (error) {
-    console.error("Error creating table:", error.message);
+    console.error("Error creating sample transaction:", error.message);
   }
 };
-
-// Start bot operations
-// bot.startListening();
 
 // Basic health check endpoint
 app.get("/health", (req, res) => {
@@ -74,12 +70,14 @@ const startServer = async () => {
     console.error("Error setting up webhook:", error.message);
   }
 
-   // Connect to the database and ensure the table exists
-  const connection = await connectToDatabase();
-  await createTable(connection);
-  
-  // Initialize BuybackBot with the connection
-  const buybackBot = new BuybackBot(config, connection);
+  // Connect to the database
+  await connectToDatabase();
+
+  // Create a sample transaction for testing
+  await createSampleTransaction();
+
+  // Initialize BuybackBot with the Mongoose model
+  const buybackBot = new BuybackBot(config, Transaction);
 
   app.listen(config.port, () => {
     console.log(`Server running on port ${config.port}`);
