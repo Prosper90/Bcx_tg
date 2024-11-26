@@ -80,7 +80,7 @@ class BuybackBot {
 
     To sell your BCX:
     1. Send your BCX to: ${this.config.botWallet}
-    2. Share your USDT wallet address with me
+    2. Share your USDT wallet address with me here
 
     Your transaction will be processed automatically and you'll receive notifications about the status.
 
