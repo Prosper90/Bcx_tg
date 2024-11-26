@@ -74,7 +74,7 @@ const startServer = async () => {
   await connectToDatabase();
 
   // Create a sample transaction for testing
-  await createSampleTransaction();
+  // await createSampleTransaction();
 
   // Initialize BuybackBot with the Mongoose model
   const buybackBot = new BuybackBot(config, Transaction);
