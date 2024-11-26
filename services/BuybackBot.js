@@ -225,7 +225,9 @@ class BuybackBot {
   }
 
   async startListening() {
+    console.log("listening, we are listening");
     this.bcxContract.on("Transfer", async (from, to, amount, event) => {
+      console.log("listening, we are listening 200");
       if (to.toLowerCase() !== this.config.botWallet.toLowerCase()) return;
       console.log(from, "checking the sender");
       // Find associated chatId from stored sessions
