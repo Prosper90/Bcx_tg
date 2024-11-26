@@ -226,49 +226,23 @@ class BuybackBot {
 
   async startListening() {
     console.log("listening, we are listening");
-    this.bcxContract.on("Transfer", async (from, to, amount, event) => {
-      console.log("listening, we are listening 200");
-      if (to.toLowerCase() !== this.config.botWallet.toLowerCase()) return;
-      console.log(from, "checking the sender");
-      // Find associated chatId from stored sessions
-      const chatId = this.findChatIdByTransaction(from);
-      if (!chatId) return;
+    try {
+      this.bcxContract.on("Transfer", async (from, to, amount, event) => {
+        console.log("listening, we are listening 200");
+        if (to.toLowerCase() !== this.config.botWallet.toLowerCase()) return;
+        console.log(from, "checking the sender");
+        // Find associated chatId from stored sessions
+        const chatId = this.findChatIdByTransaction(from);
+        if (!chatId) return;
 
-      try {
         console.log("finalizing");
         const message = `🔄 Payment detected, processinig`;
         await this.telegramBot.sendMessage(chatId, message);
         await this.processBuyback(from, amount, chatId);
-      } catch (error) {
-        console.error("Error processing buyback:", error);
-      }
-    });
-
-    // const topic = ethers.utils.id("Transfer(address,address,uint256)");
-
-    // provider.on(
-    //   {
-    //     address: this.bcxContract.address, // Contract address
-    //     topics: [topic], // Topic for Transfer event
-    //   },
-    //   async (log) => {
-    //     const parsedLog = this.bcxContract.interface.parseLog(log);
-    //     const { from, to, amount } = parsedLog.args;
-
-    //     if (to.toLowerCase() !== this.config.botWallet.toLowerCase()) return;
-
-    //     const chatId = this.findChatIdByTransaction(from);
-    //     if (!chatId) return;
-
-    //     try {
-    //       const message = `🔄 Payment detected, processinig`;
-    //       await this.telegramBot.sendMessage(chatId, message);
-    //       await this.processBuyback(from, amount, chatId);
-    //     } catch (error) {
-    //       console.error("Error processing buyback:", error);
-    //     }
-    //   }
-    // );
+      });
+    } catch (error) {
+      console.log(error, "checking the particular error");
+    }
   }
 
   findChatIdByTransaction(address) {
