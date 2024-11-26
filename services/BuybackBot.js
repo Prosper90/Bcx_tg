@@ -229,62 +229,62 @@ class BuybackBot {
   async startListening() {
     console.log("Starting transfer event listener");
     try {
-      // For proxy contracts, we need to listen to the implementation contract's events
-      const filter = this.bcxContract.filters.Transfer();
+      // For Ethers v6, we use the contract.addListener() method
+      this.bcxContract.addListener(
+        "Transfer",
+        async (from, to, amount, event) => {
+          try {
+            console.log(`Transfer event detected: From ${from} to ${to}`);
 
-      // Using the lower-level event watching method for more reliable event catching
-      this.bcxContract.on(filter, async (from, to, amount, event) => {
-        try {
-          console.log(`Transfer event detected: From ${from} to ${to}`);
+            // Convert addresses to lowercase for consistent comparison
+            const normalizedTo = to.toLowerCase();
+            const botWallet = this.config.botWallet.toLowerCase();
 
-          // Convert addresses to lowercase for consistent comparison
-          const normalizedTo = to.toLowerCase();
-          const botWallet = this.config.botWallet.toLowerCase();
+            if (normalizedTo !== botWallet) {
+              console.log("Transfer not to bot wallet, ignoring");
+              return;
+            }
 
-          if (normalizedTo !== botWallet) {
-            console.log("Transfer not to bot wallet, ignoring");
-            return;
-          }
+            console.log(`Processing transfer from ${from}`);
 
-          console.log(`Processing transfer from ${from}`);
+            // Find associated chatId from stored sessions
+            const chatId = this.findChatIdByTransaction(from);
+            if (!chatId) {
+              console.log("No associated chat ID found for sender");
+              return;
+            }
 
-          // Find associated chatId from stored sessions
-          const chatId = this.findChatIdByTransaction(from);
-          if (!chatId) {
-            console.log("No associated chat ID found for sender");
-            return;
-          }
+            console.log(`Found chat ID: ${chatId}, processing payment`);
 
-          console.log(`Found chat ID: ${chatId}, processing payment`);
+            // Send initial confirmation
+            const message = `🔄 Payment detected, processing transaction...`;
+            await this.telegramBot.sendMessage(chatId, message);
 
-          // Send initial confirmation
-          const message = `🔄 Payment detected, processing transaction...`;
-          await this.telegramBot.sendMessage(chatId, message);
+            // Process the buyback
+            await this.processBuyback(from, amount, chatId);
+          } catch (innerError) {
+            console.error("Error processing transfer event:", innerError);
 
-          // Process the buyback
-          await this.processBuyback(from, amount, chatId);
-        } catch (innerError) {
-          console.error("Error processing transfer event:", innerError);
-
-          // If we have a chatId, notify the user of the error
-          if (chatId) {
-            await this.telegramBot.sendMessage(
-              chatId,
-              "⚠️ Error processing your transaction. Please contact support."
-            );
+            // If we have a chatId, notify the user of the error
+            if (chatId) {
+              await this.telegramBot.sendMessage(
+                chatId,
+                "⚠️ Error processing your transaction. Please contact support."
+              );
+            }
           }
         }
-      });
+      );
 
-      // Add error handler for the event listener
-      this.bcxContract.on("error", (error) => {
-        console.error("Contract event error:", error);
+      // Add error handling through a separate try-catch
+      process.on("unhandledRejection", (error) => {
+        console.error("Unhandled contract event error:", error);
       });
 
       console.log("Transfer event listener successfully initialized");
     } catch (error) {
       console.error("Failed to start transfer listener:", error);
-      throw error; // Re-throw to handle it in the calling code
+      throw error;
     }
   }
 
