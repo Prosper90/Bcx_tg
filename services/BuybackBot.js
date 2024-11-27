@@ -218,7 +218,7 @@ class BuybackBot {
 
         // Remove the specific listener
         // this.bcxContract.removeListener("Transfer", transferListener);
-        await stopListening();
+        // await stopListening();
 
         // Create a new record for the transaction
         const transaction = new this.connection({
@@ -281,11 +281,12 @@ class BuybackBot {
   // Add cleanup method
   async stopListening() {
     try {
-      const filterTo = this.bcxContract.filters.Transfer(
-        null,
-        this.config.botWallet
-      );
-      this.bcxContract.removeListener(filterTo);
+      const transferFilter = {
+        address: this.config.bcxAddress,
+        topics: [id("Transfer(address,address,uint256)")],
+      };
+
+      // this.provider.off(transferFilter, this.startListening);
       console.log("Transfer event listener stopped");
     } catch (error) {
       console.error("Error stopping transfer listener:", error);

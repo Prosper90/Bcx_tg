@@ -79,17 +79,17 @@ app.get("/disable_polling", (req, res) => {
 
 // Start server and optionally setup webhook
 const startServer = async () => {
-  const ngrokUrl = config.ngrok_url; // Use .env for the ngrok URL
-  if (!ngrokUrl) {
-    console.error("NGROK_URL is not set in .env");
-    process.exit(1);
-  }
+  // const ngrokUrl = config.ngrok_url; // Use .env for the ngrok URL
+  // if (!ngrokUrl) {
+  //   console.error("NGROK_URL is not set in .env");
+  //   process.exit(1);
+  // }
 
-  try {
-    await setupWebhook(ngrokUrl);
-  } catch (error) {
-    console.error("Error setting up webhook:", error.message);
-  }
+  // try {
+  //   await setupWebhook(ngrokUrl);
+  // } catch (error) {
+  //   console.error("Error setting up webhook:", error.message);
+  // }
 
   // Connect to the database
   await connectToDatabase();
