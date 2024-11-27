@@ -1,5 +1,10 @@
 // src/services/BuybackBot.js
-const { ethers, formatEther, parseEther } = require("ethers");
+const {
+  ethers,
+  formatEther,
+  parseEther,
+  WebSocketProvider,
+} = require("ethers");
 const TelegramBot = require("node-telegram-bot-api");
 // const { formatEther, parseEther } = ethers.utils;
 const TokenABI = require("../utils/TokenABI.json");
@@ -17,7 +22,7 @@ class BuybackBot {
     this.pendingTransactions = new Map(); // Track pending transactions
 
     // Initialize blockchain connection
-    this.provider = new ethers.providers.WebSocketProvider(config.rpcUrl);
+    this.provider = new WebSocketProvider(config.rpcUrl);
     this.wallet = new ethers.Wallet(config.privateKey, this.provider);
 
     // Initialize contracts
@@ -240,17 +245,17 @@ class BuybackBot {
       }
 
       // Create filter for transfers to bot wallet
-      const filter = this.bcxContract.filters.Transfer(
-        null,
-        this.config.botWallet
-      );
+      // const filter = this.bcxContract.filters.Transfer(
+      //   null,
+      //   this.config.botWallet
+      // );
       console.log(
         "Transfer filter created for bot wallet:",
-        this.config.botWallet
+        "this.config.botWallet"
       );
 
       // Add listener using the filter
-      this.bcxContract.on(filter, async (from, to, amount, event) => {
+      this.bcxContract.on("Transfer", async (from, to, amount, event) => {
         console.log(
           `Transfer detected - From: ${from}, Amount: ${ethers.utils.formatEther(
             amount
