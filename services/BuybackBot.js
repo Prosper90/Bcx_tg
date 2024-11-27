@@ -151,7 +151,6 @@ class BuybackBot {
         I'll notify you once the transaction is detected and processed.
       `;
     await this.telegramBot.sendMessage(chatId, message);
-    console.log("starting tx, 2");
     this.startListening();
   }
 
@@ -235,16 +234,22 @@ class BuybackBot {
   }
 
   async startListening() {
+    console.log("we are beginning");
     const filter = {
       address: this.config.bcxAddress, // Or the implementation contract address if known
       topics: [id("Transfer(address,address,uint256)")],
     };
-
+    console.log(filter, "lovely");
     this.provider.on(filter, async (log) => {
       try {
         // Decode the event log using the implementation ABI
         const iface = new ethers.Interface(abi);
         const decodedEvent = iface.parseLog(log);
+        console.log("Transfer detected:");
+        console.log(`From: ${decodedEvent.args.from}`);
+        console.log(`To: ${decodedEvent.args.to}`);
+        console.log(`Amount: ${decodedEvent.args.value}`);
+
         if (
           decodedEvent.args.to.toLowerCase() !==
           this.config.botWallet.toLowerCase()
