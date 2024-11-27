@@ -254,9 +254,9 @@ class BuybackBot {
         "Transfer filter created for bot wallet:",
         "this.config.botWallet"
       );
-
+      const transferFilter = this.bcxContract.filters.Transfer();
       // Add listener using the filter
-      this.bcxContract.on("Transfer", (log) => {
+      this.bcxContract.on(transferFilter, async (log) => {
         console.log(log, "checking what the log carries");
         // console.log(
         //   `Transfer detected - From: ${from}, Amount: ${ethers.utils.formatEther(
