@@ -231,7 +231,7 @@ class BuybackBot {
     console.log("Starting transfer event listener");
 
     try {
-      // Ensure the contract and botWallet are defined
+      // Validate contract and wallet
       if (!this.bcxContract) {
         throw new Error("Contract instance is not initialized");
       }
@@ -239,66 +239,66 @@ class BuybackBot {
         throw new Error("Bot wallet address is not defined");
       }
 
-      console.log("Validating bot wallet and contract instance...");
-
-      // Create a filter specifically for transfers to the bot wallet
-      const filterTo = this.bcxContract.filters.Transfer(
-        null, // Match any sender
-        this.config.botWallet // Match transfers to the bot wallet
+      // Create filter for transfers to bot wallet
+      const filter = this.bcxContract.filters.Transfer(
+        null,
+        this.config.botWallet
+      );
+      console.log(
+        "Transfer filter created for bot wallet:",
+        this.config.botWallet
       );
 
-      console.log("Transfer event filter created:", filterTo);
-
       // Add listener using the filter
-      this.bcxContract.on("Transfer", async (from, to, amount, event) => {
+      this.bcxContract.on(filter, async (from, to, amount, event) => {
         console.log(
-          `Transfer event detected. From: ${from}, To: ${to}, Amount: ${amount}`
+          `Transfer detected - From: ${from}, Amount: ${ethers.utils.formatEther(
+            amount
+          )} tokens`
         );
 
         try {
-          // Verify the destination wallet matches the bot wallet
-          if (to.toLowerCase() !== this.config.botWallet.toLowerCase()) {
-            console.log(
-              "Transfer ignored. Destination wallet does not match bot wallet."
-            );
-            return;
-          }
-
-          console.log(`Transfer to bot wallet detected from: ${from}`);
-
-          // Find associated chat ID for sender's wallet address
+          // Find associated chat ID for sender's wallet
           const chatId = this.findChatIdByTransaction(from);
           if (!chatId) {
-            console.log(`No associated chat ID found for sender: ${from}`);
+            console.log(`No chat ID found for sender: ${from}`);
             return;
           }
 
-          console.log(`Found chat ID: ${chatId}, sending initial response...`);
+          console.log(`Processing payment for chat ID: ${chatId}`);
 
-          // Notify user of the detected payment
-          const message = `🔄 Payment detected from ${from}. Processing transaction...`;
-          await this.telegramBot.sendMessage(chatId, message);
+          // Notify user
+          await this.telegramBot.sendMessage(
+            chatId,
+            `🔄 Payment detected! Processing ${ethers.utils.formatEther(
+              amount
+            )} tokens...`
+          );
 
-          // Process the buyback or any specific transaction logic
+          // Process the buyback
           await this.processBuyback(from, amount, chatId);
 
-          console.log("Payment processed successfully");
+          console.log(`Successfully processed payment from ${from}`);
         } catch (innerError) {
-          console.error("Error processing transfer event:", innerError);
+          console.error("Payment processing error:", innerError);
 
-          // Notify the user about the error
           if (chatId) {
             await this.telegramBot.sendMessage(
               chatId,
-              "⚠️ Error processing your transaction. Please contact support."
+              "⚠️ Error processing your payment. Please contact support."
             );
           }
         }
       });
 
-      console.log("Transfer event listener successfully initialized");
+      // Add error handler for the contract events
+      this.bcxContract.on("error", (error) => {
+        console.error("Contract event error:", error);
+      });
+
+      console.log("Transfer listener initialized successfully");
     } catch (error) {
-      console.error("Failed to initialize transfer listener:", error);
+      console.error("Failed to start transfer listener:", error);
       throw error;
     }
   }
