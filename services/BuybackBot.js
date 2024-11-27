@@ -22,7 +22,7 @@ class BuybackBot {
 
     // Initialize contracts
     this.bcxContract = new ethers.Contract(
-      config.bcxAddress,
+      config.implementationContract,
       BcxABI,
       this.wallet
     );
