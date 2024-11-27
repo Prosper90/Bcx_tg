@@ -17,7 +17,7 @@ class BuybackBot {
     this.pendingTransactions = new Map(); // Track pending transactions
 
     // Initialize blockchain connection
-    this.provider = new ethers.WebSocketProvider(config.rpcUrl);
+    this.provider = new ethers.providers.WebSocketProvider(config.rpcUrl);
     this.wallet = new ethers.Wallet(config.privateKey, this.provider);
 
     // Initialize contracts
