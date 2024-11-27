@@ -17,12 +17,12 @@ class BuybackBot {
     this.pendingTransactions = new Map(); // Track pending transactions
 
     // Initialize blockchain connection
-    this.provider = new ethers.JsonRpcProvider(config.rpcUrl);
+    this.provider = new ethers.WebSocketProvider(config.rpcUrl);
     this.wallet = new ethers.Wallet(config.privateKey, this.provider);
 
     // Initialize contracts
     this.bcxContract = new ethers.Contract(
-      config.implementationContract,
+      config.bcxAddress,
       BcxABI,
       this.wallet
     );
