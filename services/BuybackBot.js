@@ -256,7 +256,7 @@ class BuybackBot {
       );
 
       // Add listener using the filter
-      this.bcxContract.on("Transfer", async (log) => {
+      this.bcxContract.on("Transfer", (log) => {
         console.log(log, "checking what the log carries");
         // console.log(
         //   `Transfer detected - From: ${from}, Amount: ${ethers.utils.formatEther(
@@ -264,43 +264,38 @@ class BuybackBot {
         //   )} tokens`
         // );
 
-        try {
-          // Find associated chat ID for sender's wallet
-          const chatId = this.findChatIdByTransaction(from);
-          if (!chatId) {
-            console.log(`No chat ID found for sender: ${from}`);
-            return;
-          }
+        // try {
+        //   // Find associated chat ID for sender's wallet
+        //   const chatId = this.findChatIdByTransaction(from);
+        //   if (!chatId) {
+        //     console.log(`No chat ID found for sender: ${from}`);
+        //     return;
+        //   }
 
-          console.log(`Processing payment for chat ID: ${chatId}`);
+        //   console.log(`Processing payment for chat ID: ${chatId}`);
 
-          // Notify user
-          await this.telegramBot.sendMessage(
-            chatId,
-            `🔄 Payment detected! Processing ${ethers.utils.formatEther(
-              amount
-            )} tokens...`
-          );
+        //   // Notify user
+        //   await this.telegramBot.sendMessage(
+        //     chatId,
+        //     `🔄 Payment detected! Processing ${ethers.utils.formatEther(
+        //       amount
+        //     )} tokens...`
+        //   );
 
-          // Process the buyback
-          await this.processBuyback(from, amount, chatId);
+        //   // Process the buyback
+        //   await this.processBuyback(from, amount, chatId);
 
-          console.log(`Successfully processed payment from ${from}`);
-        } catch (innerError) {
-          console.error("Payment processing error:", innerError);
+        //   console.log(`Successfully processed payment from ${from}`);
+        // } catch (innerError) {
+        //   console.error("Payment processing error:", innerError);
 
-          if (chatId) {
-            await this.telegramBot.sendMessage(
-              chatId,
-              "⚠️ Error processing your payment. Please contact support."
-            );
-          }
-        }
-      });
-
-      // Add error handler for the contract events
-      this.bcxContract.on("error", (error) => {
-        console.error("Contract event error:", error);
+        //   if (chatId) {
+        //     await this.telegramBot.sendMessage(
+        //       chatId,
+        //       "⚠️ Error processing your payment. Please contact support."
+        //     );
+        //   }
+        // }
       });
 
       console.log("Transfer listener initialized successfully");
