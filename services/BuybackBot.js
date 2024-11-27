@@ -4,6 +4,7 @@ const {
   formatEther,
   parseEther,
   WebSocketProvider,
+  isAddress,
 } = require("ethers");
 const TelegramBot = require("node-telegram-bot-api");
 // const { formatEther, parseEther } = ethers.utils;
@@ -70,7 +71,7 @@ class BuybackBot {
         break;
       default:
         // Handle potential wallet addresses
-        if (ethers.isAddress(text)) {
+        if (isAddress(text)) {
           await this.handleAddressSubmission(chatId, text);
         }
     }
