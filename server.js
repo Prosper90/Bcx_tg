@@ -4,6 +4,7 @@ const config = require("./config");
 const { BuybackBot } = require("./services/BuybackBot");
 const { setupWebhook } = require("./utils/setup-webhook");
 const mongoose = require("mongoose");
+const TelegramBot = require("node-telegram-bot-api");
 
 const app = express();
 app.use(express.json());
@@ -50,8 +51,32 @@ const createSampleTransaction = async () => {
 
 // Basic health check endpoint
 app.get("/health", (req, res) => {
-  console.error("Checking the cronjob");
-  res.json({ status: "healthy" });
+  async function checkWebhook() {
+    const token = config.telegramBotToken;
+
+    try {
+      const response = await axios.get(
+        `https://api.telegram.org/bot${token}/getWebhookInfo`
+      );
+
+      console.log("Current webhook info:", response.data);
+    } catch (error) {
+      console.error(
+        "Error fetching webhook info:",
+        error.response?.data || error.message
+      );
+    }
+  }
+  res.json({ status: "healthy", data: response });
+});
+
+app.get("/disable_polling", (req, res) => {
+  try {
+    const bot = new TelegramBot(config.telegramBotToken, { polling: false });
+    res.status(200).json({ status: true, data: bot });
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 // Start server and optionally setup webhook
