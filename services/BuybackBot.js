@@ -234,75 +234,41 @@ class BuybackBot {
   }
 
   async startListening() {
-    console.log("Starting transfer event listener");
+    const filter = {
+      address: config.bcxAddress, // Or the implementation contract address if known
+      topics: [id("Transfer(address,address,uint256)")],
+    };
 
-    try {
-      // Validate contract and wallet
-      if (!this.bcxContract) {
-        throw new Error("Contract instance is not initialized");
+    this.provider.on(filter, async (log) => {
+      try {
+        // Decode the event log using the implementation ABI
+        const iface = new ethers.Interface(abi);
+        const decodedEvent = iface.parseLog(log);
+        if (
+          decodedEvent.args.to.toLowerCase() !==
+          this.config.botWallet.toLowerCase()
+        )
+          return;
+
+        console.log("Transfer detected:");
+        console.log(`From: ${decodedEvent.args.from}`);
+        console.log(`To: ${decodedEvent.args.to}`);
+        console.log(`Amount: ${decodedEvent.args.value}`);
+
+        const chatId = this.findChatIdByTransaction(decodedEvent.args.from);
+        if (!chatId) return;
+
+        const message = `🔄 Payment detected, processinig`;
+        await this.telegramBot.sendMessage(chatId, message);
+        await this.processBuyback(
+          decodedEvent.args.from,
+          decodedEvent.args.value,
+          chatId
+        );
+      } catch (error) {
+        console.error("Error decoding event log:", error);
       }
-      if (!this.config?.botWallet) {
-        throw new Error("Bot wallet address is not defined");
-      }
-
-      // Create filter for transfers to bot wallet
-      // const filter = this.bcxContract.filters.Transfer(
-      //   null,
-      //   this.config.botWallet
-      // );
-      console.log(
-        "Transfer filter created for bot wallet:",
-        "this.config.botWallet"
-      );
-      const transferFilter = this.bcxContract.filters.Transfer();
-      // Add listener using the filter
-      this.bcxContract.on(transferFilter, async (log) => {
-        console.log(log, "checking what the log carries");
-        // console.log(
-        //   `Transfer detected - From: ${from}, Amount: ${ethers.utils.formatEther(
-        //     amount
-        //   )} tokens`
-        // );
-
-        // try {
-        //   // Find associated chat ID for sender's wallet
-        //   const chatId = this.findChatIdByTransaction(from);
-        //   if (!chatId) {
-        //     console.log(`No chat ID found for sender: ${from}`);
-        //     return;
-        //   }
-
-        //   console.log(`Processing payment for chat ID: ${chatId}`);
-
-        //   // Notify user
-        //   await this.telegramBot.sendMessage(
-        //     chatId,
-        //     `🔄 Payment detected! Processing ${ethers.utils.formatEther(
-        //       amount
-        //     )} tokens...`
-        //   );
-
-        //   // Process the buyback
-        //   await this.processBuyback(from, amount, chatId);
-
-        //   console.log(`Successfully processed payment from ${from}`);
-        // } catch (innerError) {
-        //   console.error("Payment processing error:", innerError);
-
-        //   if (chatId) {
-        //     await this.telegramBot.sendMessage(
-        //       chatId,
-        //       "⚠️ Error processing your payment. Please contact support."
-        //     );
-        //   }
-        // }
-      });
-
-      console.log("Transfer listener initialized successfully");
-    } catch (error) {
-      console.error("Failed to start transfer listener:", error);
-      throw error;
-    }
+    });
   }
 
   // Add cleanup method
