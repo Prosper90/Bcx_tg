@@ -5,6 +5,7 @@ const {
   parseEther,
   WebSocketProvider,
   isAddress,
+  id,
 } = require("ethers");
 const TelegramBot = require("node-telegram-bot-api");
 // const { formatEther, parseEther } = ethers.utils;
@@ -235,7 +236,7 @@ class BuybackBot {
 
   async startListening() {
     const filter = {
-      address: config.bcxAddress, // Or the implementation contract address if known
+      address: this.config.bcxAddress, // Or the implementation contract address if known
       topics: [id("Transfer(address,address,uint256)")],
     };
 
