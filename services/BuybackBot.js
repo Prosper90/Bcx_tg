@@ -242,6 +242,7 @@ class BuybackBot {
     console.log(filter, "lovely");
     this.provider.on(filter, async (log) => {
       try {
+        console.log(log, "let me see abeg");
         // Decode the event log using the implementation ABI
         const iface = new ethers.Interface(BcxABI);
         const decodedEvent = iface.parseLog(log);
