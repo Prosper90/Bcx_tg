@@ -250,7 +250,7 @@ class BuybackBot {
       console.log("Transfer event filter created:", filterTo);
 
       // Add listener using the filter
-      this.bcxContract.on(filterTo, async (from, to, amount, event) => {
+      this.bcxContract.on("Transfer", async (from, to, amount, event) => {
         console.log(
           `Transfer event detected. From: ${from}, To: ${to}, Amount: ${amount}`
         );
