@@ -237,7 +237,7 @@ class BuybackBot {
       );
 
       // Listen for transfers to bot wallet
-      this.bcxContract.on(filterTo, async (from, to, amount, event) => {
+      this.bcxContract.on("Transfer", async (from, to, amount, event) => {
         try {
           console.log(
             `Transfer detected - From: ${from}, To: ${to}, Amount: ${amount}`
