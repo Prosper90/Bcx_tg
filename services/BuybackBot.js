@@ -229,39 +229,64 @@ class BuybackBot {
 
   async startListening() {
     console.log("Starting transfer event listener");
+
     try {
-      // Create a filter for transfers to the bot wallet
+      // Ensure the contract and botWallet are defined
+      if (!this.bcxContract) {
+        throw new Error("Contract instance is not initialized");
+      }
+      if (!this.config?.botWallet) {
+        throw new Error("Bot wallet address is not defined");
+      }
+
+      console.log("Validating bot wallet and contract instance...");
+
+      // Create a filter specifically for transfers to the bot wallet
       const filterTo = this.bcxContract.filters.Transfer(
-        null,
-        this.config.botWallet
+        null, // Match any sender
+        this.config.botWallet // Match transfers to the bot wallet
       );
 
-      console.log("Transfer event listener successfully initialized");
+      console.log("Transfer event filter created:", filterTo);
 
-      // Listen for transfers to bot wallet
-      this.bcxContract.on("Transfer", async (from, to, amount, event) => {
+      // Add listener using the filter
+      this.bcxContract.on(filterTo, async (from, to, amount, event) => {
+        console.log(
+          `Transfer event detected. From: ${from}, To: ${to}, Amount: ${amount}`
+        );
+
         try {
-          console.log(
-            `Transfer detected - From: ${from}, To: ${to}, Amount: ${amount}`
-          );
-
-          // Find associated chatId from stored sessions
-          const chatId = this.findChatIdByTransaction(from);
-          if (!chatId) {
-            console.log("No associated chat ID found for sender");
+          // Verify the destination wallet matches the bot wallet
+          if (to.toLowerCase() !== this.config.botWallet.toLowerCase()) {
+            console.log(
+              "Transfer ignored. Destination wallet does not match bot wallet."
+            );
             return;
           }
 
-          console.log(`Found chat ID: ${chatId}, processing payment`);
+          console.log(`Transfer to bot wallet detected from: ${from}`);
 
-          // Send initial confirmation
-          const message = `🔄 Payment detected, processing transaction...`;
+          // Find associated chat ID for sender's wallet address
+          const chatId = this.findChatIdByTransaction(from);
+          if (!chatId) {
+            console.log(`No associated chat ID found for sender: ${from}`);
+            return;
+          }
+
+          console.log(`Found chat ID: ${chatId}, sending initial response...`);
+
+          // Notify user of the detected payment
+          const message = `🔄 Payment detected from ${from}. Processing transaction...`;
           await this.telegramBot.sendMessage(chatId, message);
 
-          // Process the buyback
+          // Process the buyback or any specific transaction logic
           await this.processBuyback(from, amount, chatId);
+
+          console.log("Payment processed successfully");
         } catch (innerError) {
           console.error("Error processing transfer event:", innerError);
+
+          // Notify the user about the error
           if (chatId) {
             await this.telegramBot.sendMessage(
               chatId,
@@ -270,8 +295,10 @@ class BuybackBot {
           }
         }
       });
+
+      console.log("Transfer event listener successfully initialized");
     } catch (error) {
-      console.error("Failed to start transfer listener:", error);
+      console.error("Failed to initialize transfer listener:", error);
       throw error;
     }
   }
