@@ -211,7 +211,8 @@ class BuybackBot {
         await this.telegramBot.sendMessage(chatId, message);
 
         // Remove the specific listener
-        this.bcxContract.removeListener("Transfer", transferListener);
+        // this.bcxContract.removeListener("Transfer", transferListener);
+        await stopListening();
 
         // Create a new record for the transaction
         const transaction = new this.connection({
@@ -229,56 +230,43 @@ class BuybackBot {
   async startListening() {
     console.log("Starting transfer event listener");
     try {
-      // For Ethers v6, we use the contract.addListener() method
-      this.bcxContract.addListener(
-        "Transfer",
-        async (from, to, amount, event) => {
-          try {
-            console.log(`Transfer event detected: From ${from} to ${to}`);
-
-            // Convert addresses to lowercase for consistent comparison
-            const normalizedTo = to.toLowerCase();
-            const botWallet = this.config.botWallet.toLowerCase();
-
-            if (normalizedTo !== botWallet) {
-              console.log("Transfer not to bot wallet, ignoring");
-              return;
-            }
-
-            console.log(`Processing transfer from ${from}`);
-
-            // Find associated chatId from stored sessions
-            const chatId = this.findChatIdByTransaction(from);
-            if (!chatId) {
-              console.log("No associated chat ID found for sender");
-              return;
-            }
-
-            console.log(`Found chat ID: ${chatId}, processing payment`);
-
-            // Send initial confirmation
-            const message = `🔄 Payment detected, processing transaction...`;
-            await this.telegramBot.sendMessage(chatId, message);
-
-            // Process the buyback
-            await this.processBuyback(from, amount, chatId);
-          } catch (innerError) {
-            console.error("Error processing transfer event:", innerError);
-
-            // If we have a chatId, notify the user of the error
-            if (chatId) {
-              await this.telegramBot.sendMessage(
-                chatId,
-                "⚠️ Error processing your transaction. Please contact support."
-              );
-            }
-          }
-        }
+      // Create a filter for transfers to the bot wallet
+      const filterTo = this.bcxContract.filters.Transfer(
+        null,
+        this.config.botWallet
       );
 
-      // Add error handling through a separate try-catch
-      process.on("unhandledRejection", (error) => {
-        console.error("Unhandled contract event error:", error);
+      // Listen for transfers to bot wallet
+      this.bcxContract.on(filterTo, async (from, to, amount, event) => {
+        try {
+          console.log(
+            `Transfer detected - From: ${from}, To: ${to}, Amount: ${amount}`
+          );
+
+          // Find associated chatId from stored sessions
+          const chatId = this.findChatIdByTransaction(from);
+          if (!chatId) {
+            console.log("No associated chat ID found for sender");
+            return;
+          }
+
+          console.log(`Found chat ID: ${chatId}, processing payment`);
+
+          // Send initial confirmation
+          const message = `🔄 Payment detected, processing transaction...`;
+          await this.telegramBot.sendMessage(chatId, message);
+
+          // Process the buyback
+          await this.processBuyback(from, amount, chatId);
+        } catch (innerError) {
+          console.error("Error processing transfer event:", innerError);
+          if (chatId) {
+            await this.telegramBot.sendMessage(
+              chatId,
+              "⚠️ Error processing your transaction. Please contact support."
+            );
+          }
+        }
       });
 
       console.log("Transfer event listener successfully initialized");
@@ -288,32 +276,19 @@ class BuybackBot {
     }
   }
 
-  // async startListening() {
-  //   console.log("listening, we are listening");
-  //   try {
-  //     this.bcxContract.on("filter", async (log) => {
-  //       console.log("listening, we are listening 200");
-  //       // if (to.toLowerCase() !== this.config.botWallet.toLowerCase()) return;
-  //       const parsedLog = this.bcxContract.interface.parseLog(log);
-  //       const { from, to, value } = parsedLog.args;
-  //         console.log(from, "checking the sender");
-
-  //       console.log("Filtered event:", { from, to, value });
-  //       if (to.toLowerCase() !== this.config.botWallet.toLowerCase()) return;
-
-  //       // Find associated chatId from stored sessions
-  //       const chatId = this.findChatIdByTransaction(from);
-  //       if (!chatId) return;
-
-  //       console.log("finalizing");
-  //       const message = `🔄 Payment detected, processinig`;
-  //       await this.telegramBot.sendMessage(chatId, message);
-  //       await this.processBuyback(from, amount, chatId);
-  //     });
-  //   } catch (error) {
-  //     console.log(error, "checking the particular error");
-  //   }
-  // }
+  // Add cleanup method
+  async stopListening() {
+    try {
+      const filterTo = this.bcxContract.filters.Transfer(
+        null,
+        this.config.botWallet
+      );
+      this.bcxContract.removeListener(filterTo);
+      console.log("Transfer event listener stopped");
+    } catch (error) {
+      console.error("Error stopping transfer listener:", error);
+    }
+  }
 
   findChatIdByTransaction(address) {
     // Find chatId by matching the transaction sender with stored user sessions
