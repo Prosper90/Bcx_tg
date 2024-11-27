@@ -17,7 +17,7 @@ class BuybackBot {
     this.pendingTransactions = new Map(); // Track pending transactions
 
     // Initialize blockchain connection
-    this.provider = new ethers.JsonRpcProvider(config.rpcUrl);
+    this.provider = new ethers.WebSocketProvider(config.rpcUrl);
     this.wallet = new ethers.Wallet(config.privateKey, this.provider);
 
     // Initialize contracts
@@ -211,8 +211,7 @@ class BuybackBot {
         await this.telegramBot.sendMessage(chatId, message);
 
         // Remove the specific listener
-        // this.bcxContract.removeListener("Transfer", transferListener);
-        await stopListening();
+        this.bcxContract.removeListener("Transfer", transferListener);
 
         // Create a new record for the transaction
         const transaction = new this.connection({
@@ -230,56 +229,57 @@ class BuybackBot {
   async startListening() {
     console.log("Starting transfer event listener");
     try {
-      // Create an event filter
-      const filter = this.bcxContract.filters.Transfer();
+      // For Ethers v6, we use the contract.addListener() method
+      this.bcxContract.addListener(
+        "Transfer",
+        async (from, to, amount, event) => {
+          try {
+            console.log(`Transfer event detected: From ${from} to ${to}`);
 
-      // Use polling instead of WebSocket subscription
-      this.bcxContract.provider.on(filter, async (from, to, amount, event) => {
-        try {
-          console.log(`Transfer event detected: From ${from} to ${to}`);
+            // Convert addresses to lowercase for consistent comparison
+            const normalizedTo = to.toLowerCase();
+            const botWallet = this.config.botWallet.toLowerCase();
 
-          // Convert addresses to lowercase for consistent comparison
-          const normalizedTo = to.toLowerCase();
-          const botWallet = this.config.botWallet.toLowerCase();
+            if (normalizedTo !== botWallet) {
+              console.log("Transfer not to bot wallet, ignoring");
+              return;
+            }
 
-          if (normalizedTo !== botWallet) {
-            console.log("Transfer not to bot wallet, ignoring");
-            return;
-          }
+            console.log(`Processing transfer from ${from}`);
 
-          console.log(`Processing transfer from ${from}`);
+            // Find associated chatId from stored sessions
+            const chatId = this.findChatIdByTransaction(from);
+            if (!chatId) {
+              console.log("No associated chat ID found for sender");
+              return;
+            }
 
-          // Find associated chatId from stored sessions
-          const chatId = this.findChatIdByTransaction(from);
-          if (!chatId) {
-            console.log("No associated chat ID found for sender");
-            return;
-          }
+            console.log(`Found chat ID: ${chatId}, processing payment`);
 
-          console.log(`Found chat ID: ${chatId}, processing payment`);
+            // Send initial confirmation
+            const message = `🔄 Payment detected, processing transaction...`;
+            await this.telegramBot.sendMessage(chatId, message);
 
-          // Send initial confirmation
-          const message = `🔄 Payment detected, processing transaction...`;
-          await this.telegramBot.sendMessage(chatId, message);
+            // Process the buyback
+            await this.processBuyback(from, amount, chatId);
+          } catch (innerError) {
+            console.error("Error processing transfer event:", innerError);
 
-          // Process the buyback
-          await this.processBuyback(from, amount, chatId);
-        } catch (innerError) {
-          console.error("Error processing transfer event:", innerError);
-          if (chatId) {
-            await this.telegramBot.sendMessage(
-              chatId,
-              "⚠️ Error processing your transaction. Please contact support."
-            );
+            // If we have a chatId, notify the user of the error
+            if (chatId) {
+              await this.telegramBot.sendMessage(
+                chatId,
+                "⚠️ Error processing your transaction. Please contact support."
+              );
+            }
           }
         }
-      });
+      );
 
-      // Set up polling interval (optional)
-      const pollingInterval = 15000; // 15 seconds
-      if (this.bcxContract.provider.pollingInterval !== pollingInterval) {
-        this.bcxContract.provider.pollingInterval = pollingInterval;
-      }
+      // Add error handling through a separate try-catch
+      process.on("unhandledRejection", (error) => {
+        console.error("Unhandled contract event error:", error);
+      });
 
       console.log("Transfer event listener successfully initialized");
     } catch (error) {
@@ -288,16 +288,32 @@ class BuybackBot {
     }
   }
 
-  // Add a cleanup method to remove listeners when needed
-  async stopListening() {
-    try {
-      const filter = this.bcxContract.filters.Transfer();
-      this.bcxContract.provider.removeAllListeners(filter);
-      console.log("Transfer event listener stopped");
-    } catch (error) {
-      console.error("Error stopping transfer listener:", error);
-    }
-  }
+  // async startListening() {
+  //   console.log("listening, we are listening");
+  //   try {
+  //     this.bcxContract.on("filter", async (log) => {
+  //       console.log("listening, we are listening 200");
+  //       // if (to.toLowerCase() !== this.config.botWallet.toLowerCase()) return;
+  //       const parsedLog = this.bcxContract.interface.parseLog(log);
+  //       const { from, to, value } = parsedLog.args;
+  //         console.log(from, "checking the sender");
+
+  //       console.log("Filtered event:", { from, to, value });
+  //       if (to.toLowerCase() !== this.config.botWallet.toLowerCase()) return;
+
+  //       // Find associated chatId from stored sessions
+  //       const chatId = this.findChatIdByTransaction(from);
+  //       if (!chatId) return;
+
+  //       console.log("finalizing");
+  //       const message = `🔄 Payment detected, processinig`;
+  //       await this.telegramBot.sendMessage(chatId, message);
+  //       await this.processBuyback(from, amount, chatId);
+  //     });
+  //   } catch (error) {
+  //     console.log(error, "checking the particular error");
+  //   }
+  // }
 
   findChatIdByTransaction(address) {
     // Find chatId by matching the transaction sender with stored user sessions
