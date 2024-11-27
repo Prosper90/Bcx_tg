@@ -51,9 +51,7 @@ const createSampleTransaction = async () => {
 
 // Basic health check endpoint
 app.get("/health", (req, res) => {
-  async function checkWebhook() {
     const token = config.telegramBotToken;
-
     try {
       const response = await axios.get(
         `https://api.telegram.org/bot${token}/getWebhookInfo`
@@ -66,7 +64,7 @@ app.get("/health", (req, res) => {
         error.response?.data || error.message
       );
     }
-  }
+  
   res.json({ status: "healthy", data: response });
 });
 
