@@ -27,7 +27,11 @@ class BuybackBot {
       this.wallet
     );
 
-    const erc20BCX = new ethers.Contract(config.bcxAddress, BcxABI, provider);
+    const erc20BCX = new ethers.Contract(
+      config.bcxAddress,
+      BcxABI,
+      this.provider
+    );
 
     this.usdtContract = new ethers.Contract(
       config.usdtAddress,
