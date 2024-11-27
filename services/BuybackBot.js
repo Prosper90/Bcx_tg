@@ -23,14 +23,8 @@ class BuybackBot {
     // Initialize contracts
     this.bcxContract = new ethers.Contract(
       config.bcxAddress,
-      BcxABI,
+      TokenABI,
       this.wallet
-    );
-
-    const erc20BCX = new ethers.Contract(
-      config.bcxAddress,
-      BcxABI,
-      this.provider
     );
 
     this.usdtContract = new ethers.Contract(
@@ -242,8 +236,10 @@ class BuybackBot {
         this.config.botWallet
       );
 
+      console.log("Transfer event listener successfully initialized");
+
       // Listen for transfers to bot wallet
-      erc20BCX.on("Transfer", async (from, to, amount, event) => {
+      this.bcxContract.on("Transfer", async (from, to, amount, event) => {
         try {
           console.log(
             `Transfer detected - From: ${from}, To: ${to}, Amount: ${amount}`
@@ -274,8 +270,6 @@ class BuybackBot {
           }
         }
       });
-
-      console.log("Transfer event listener successfully initialized");
     } catch (error) {
       console.error("Failed to start transfer listener:", error);
       throw error;
