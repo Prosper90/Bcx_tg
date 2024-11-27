@@ -8,6 +8,24 @@ async function setupWebhook(ngrokUrl) {
   const webhookUrl = `${ngrokUrl}/telegram-webhook`;
 
   try {
+    // Step 1: Check the current webhook info
+    const currentWebhookResponse = await axios.get(
+      `https://api.telegram.org/bot${token}/getWebhookInfo`
+    );
+
+    const currentWebhook = currentWebhookResponse.data.result.url;
+
+    if (currentWebhook === webhookUrl) {
+      console.log("Webhook already set to the correct URL.");
+      return {
+        status: "unchanged",
+        message: "Webhook already set to the correct URL.",
+      };
+    }
+
+    console.log("Current webhook URL does not match. Setting new webhook...");
+
+    // Step 2: Set the new webhook if it doesn't match
     const response = await axios.get(
       `https://api.telegram.org/bot${token}/setWebhook`,
       {
@@ -19,10 +37,10 @@ async function setupWebhook(ngrokUrl) {
     );
 
     console.log("Webhook setup response:", response.data);
-    return response.data;
+    return { status: "updated", data: response.data };
   } catch (error) {
     console.error(
-      "Webhook setup failed:",
+      "Error while checking or setting webhook:",
       error.response?.data || error.message
     );
     throw error;

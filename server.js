@@ -63,11 +63,7 @@ const startServer = async () => {
   }
 
   try {
-    console.error("Setting up webhook...");
-    if (config.PORT === 3000) {
-      await setupWebhook(ngrokUrl);
-      console.error("Webhook setup completed.");
-    }
+    await setupWebhook(ngrokUrl);
   } catch (error) {
     console.error("Error setting up webhook:", error.message);
   }
