@@ -256,12 +256,13 @@ class BuybackBot {
       );
 
       // Add listener using the filter
-      this.bcxContract.on("Transfer", async (from, to, amount, event) => {
-        console.log(
-          `Transfer detected - From: ${from}, Amount: ${ethers.utils.formatEther(
-            amount
-          )} tokens`
-        );
+      this.bcxContract.on("Transfer", async (log) => {
+        console.log(log, "checking what the log carries");
+        // console.log(
+        //   `Transfer detected - From: ${from}, Amount: ${ethers.utils.formatEther(
+        //     amount
+        //   )} tokens`
+        // );
 
         try {
           // Find associated chat ID for sender's wallet
