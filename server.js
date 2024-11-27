@@ -50,21 +50,21 @@ const createSampleTransaction = async () => {
 };
 
 // Basic health check endpoint
-app.get("/health", (req, res) => {
-    const token = config.telegramBotToken;
-    try {
-      const response = await axios.get(
-        `https://api.telegram.org/bot${token}/getWebhookInfo`
-      );
+app.get("/health", async (req, res) => {
+  const token = config.telegramBotToken;
+  try {
+    const response = await axios.get(
+      `https://api.telegram.org/bot${token}/getWebhookInfo`
+    );
 
-      console.log("Current webhook info:", response.data);
-    } catch (error) {
-      console.error(
-        "Error fetching webhook info:",
-        error.response?.data || error.message
-      );
-    }
-  
+    console.log("Current webhook info:", response.data);
+  } catch (error) {
+    console.error(
+      "Error fetching webhook info:",
+      error.response?.data || error.message
+    );
+  }
+
   res.json({ status: "healthy", data: response });
 });
 
