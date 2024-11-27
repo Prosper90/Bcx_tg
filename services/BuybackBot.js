@@ -27,6 +27,8 @@ class BuybackBot {
       this.wallet
     );
 
+    const erc20BCX = new ethers.Contract(config.bcxAddress, BcxABI, provider);
+
     this.usdtContract = new ethers.Contract(
       config.usdtAddress,
       TokenABI,
@@ -237,7 +239,7 @@ class BuybackBot {
       );
 
       // Listen for transfers to bot wallet
-      this.bcxContract.on("Transfer", async (from, to, amount, event) => {
+      erc20BCX.on("Transfer", async (from, to, amount, event) => {
         try {
           console.log(
             `Transfer detected - From: ${from}, To: ${to}, Amount: ${amount}`
