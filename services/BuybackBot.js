@@ -1,5 +1,5 @@
 const TelegramBot = require("node-telegram-bot-api");
-const Web3 = require("web3");
+const { Web3 } = require("web3");
 const TokenABI = require("../utils/TokenABI.json");
 const BcxABI = require("../utils/BcxABI.json");
 
@@ -14,7 +14,7 @@ class BuybackBot {
     // Initialize Web3
     this.web3 = new Web3(new Web3.providers.WebsocketProvider(config.rpcUrl));
     this.account = this.web3.eth.accounts.privateKeyToAccount(
-      config.privateKey
+      `0x${config.privateKey}`
     );
     this.web3.eth.accounts.wallet.add(this.account);
 
