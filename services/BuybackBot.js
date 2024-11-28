@@ -18,7 +18,7 @@ class BuybackBot {
       new Web3.providers.WebsocketProvider(config.rpcUrl),
       new Web3.providers.HttpProvider(config.fallbackRpcUrl),
     ];
-    this.web3 = new Web3(new Web3.providers.WebsocketProvider(config.fallbackRpcUrl));
+    this.web3 = new Web3(new Web3.providers.HttpProvider(config.fallbackRpcUrl));
     this.account = this.web3.eth.accounts.privateKeyToAccount(
       `0x${config.privateKey}`
     );
@@ -220,46 +220,93 @@ Status: Successful`;
     }
   }
 
+  // async startListening() {
+  //   try {
+  //     console.log(1);
+
+  //     if (!this.bcxContract) {
+  //       throw new Error("Contract not initialized");
+  //     }
+  //     console.log(2);
+  //     // Additional null check before calling .on()
+  //     if (this.bcxContract && typeof this.bcxContract.events === "object") {
+  //       console.log(3);
+  //       const CheckOut = this.bcxContract.events.Transfer({
+  //         filter: { to: this.config.botWallet },
+  //       });
+  //       console.log(4);
+  //       if (CheckOut) {
+  //         CheckOut.on("data", async (event) => {
+  //           // console.log("Filtered Transfer Event:", event);
+  //           const chatId = this.findChatIdByTransaction(
+  //             event.returnValues.from
+  //           );
+  //           if (!chatId) return;
+  //           console.log(5);
+  //           await this.telegramBot.sendMessage(
+  //             chatId,
+  //             "🔄 Payment detected, processing"
+  //           );
+  //           await this.processBuyback(
+  //             event.returnValues.from,
+  //             event.returnValues.value,
+  //             chatId
+  //           );
+  //         }).on("error", (error) => {
+  //           console.error("Event Listener Error:", error);
+  //         });
+  //         console.log(6);
+  //       }
+  //     } else {
+  //       console.error("Contract events are not available");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error starting transfer listener:", error);
+  //   }
+  // }
+
+
+
   async startListening() {
     try {
       console.log(1);
+      const pastEvents = await this.bcxContract.getPastEvents('Transfer', {
+        filter: { to: this.config.botWallet },
+        fromBlock: 'latest',
+        toBlock: 'latest'
+      });
 
-      if (!this.bcxContract) {
-        throw new Error("Contract not initialized");
+      for (let event of pastEvents) {
+        // Process each past event
+        const chatId = this.findChatIdByTransaction(event.returnValues.from);
+        if (!chatId) continue;
+  
+        await this.telegramBot.sendMessage(
+          chatId,
+          "🔄 Payment detected, processing"
+        );
+        
+        await this.processBuyback(
+          event.returnValues.from,
+          event.returnValues.value,
+          chatId
+        );
       }
-      console.log(2);
-      // Additional null check before calling .on()
-      if (this.bcxContract && typeof this.bcxContract.events === "object") {
-        console.log(3);
-        const CheckOut = this.bcxContract.events.Transfer({
+    // Optionally set up periodic polling
+    setInterval(async () => {
+      try {
+        const newEvents = await this.bcxContract.getPastEvents('Transfer', {
           filter: { to: this.config.botWallet },
+          fromBlock: 'latest',
+          toBlock: 'latest'
         });
-        console.log(4);
-        if (CheckOut) {
-          CheckOut.on("data", async (event) => {
-            // console.log("Filtered Transfer Event:", event);
-            const chatId = this.findChatIdByTransaction(
-              event.returnValues.from
-            );
-            if (!chatId) return;
-            console.log(5);
-            await this.telegramBot.sendMessage(
-              chatId,
-              "🔄 Payment detected, processing"
-            );
-            await this.processBuyback(
-              event.returnValues.from,
-              event.returnValues.value,
-              chatId
-            );
-          }).on("error", (error) => {
-            console.error("Event Listener Error:", error);
-          });
-          console.log(6);
-        }
-      } else {
-        console.error("Contract events are not available");
+
+        // Similar processing logic as above
+      } catch (error) {
+        console.error('Polling error:', error);
       }
+    }, 15000); // Poll every 15 seconds
+      
     } catch (error) {
       console.error("Error starting transfer listener:", error);
     }
