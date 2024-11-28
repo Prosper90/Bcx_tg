@@ -219,7 +219,7 @@ class BuybackBot {
 
         // Remove the specific listener
         // this.bcxContract.removeListener("Transfer", transferListener);
-        await this.stopListening();
+        // await this.stopListening();
 
         // Create a new record for the transaction
         const transaction = new this.connection({
@@ -256,48 +256,52 @@ class BuybackBot {
   }
 
   async startListening() {
-    console.log("we are beginning", this.config.rpcUrl);
-    const providerIni = new WebSocketProvider(this.config.rpcUrl);
-    const filter = {
-      address: this.config.bcxAddress, // Or the implementation contract address if known
-      topics: [id("Transfer(address,address,uint256)")],
-    };
-    console.log(providerIni, "lovely");
-     // Define the event handler function
-     this.transferEventHandler = async (log) => {
-      try {
-        console.log("happy  happy happy happy")
-        const iface = new ethers.Interface(BcxABI);
-        const decodedEvent = iface.parseLog(log);
-        
-        if (decodedEvent.args.to.toLowerCase() !== this.config.botWallet.toLowerCase()) {
-          return;
+     try {
+      const provider = new WebSocketProvider(this.config.rpcUrl);
+      const contractAddress = this.config.bcxAddress; // Proxy contract address
+  
+      const filter = {
+        address: contractAddress, // Or the implementation contract address if known
+        topics: [id("Transfer(address,address,uint256)")],
+      };
+      console.log(this.provider, "lovely");
+       // Define the event handler function
+       provider.on(filter, async (log) => {
+        try {
+          console.log("happy  happy happy happy")
+          const iface = new ethers.Interface(BcxABI);
+          const decodedEvent = iface.parseLog(log);
+          
+          if (decodedEvent.args.to.toLowerCase() !== this.config.botWallet.toLowerCase()) {
+            return;
+          }
+  
+          console.log("Transfer detected:");
+          console.log(`From: ${decodedEvent.args.from}`);
+          console.log(`To: ${decodedEvent.args.to}`);
+          console.log(`Amount: ${decodedEvent.args.value}`);
+  
+          const chatId = this.findChatIdByTransaction(decodedEvent.args.from);
+          if (!chatId) return;
+  
+          const message = `🔄 Payment detected, processing`;
+          await this.telegramBot.sendMessage(chatId, message);
+          await this.processBuyback(
+            decodedEvent.args.from,
+            decodedEvent.args.value,
+            chatId
+          );
+          this.provider.off(filter, () => {
+            console.log("Transfer event listener stopped successfully")
+          });
+        } catch (error) {
+          throw error;
         }
-
-        console.log("Transfer detected:");
-        console.log(`From: ${decodedEvent.args.from}`);
-        console.log(`To: ${decodedEvent.args.to}`);
-        console.log(`Amount: ${decodedEvent.args.value}`);
-
-        const chatId = this.findChatIdByTransaction(decodedEvent.args.from);
-        if (!chatId) return;
-
-        const message = `🔄 Payment detected, processing`;
-        await this.telegramBot.sendMessage(chatId, message);
-        await this.processBuyback(
-          decodedEvent.args.from,
-          decodedEvent.args.value,
-          chatId
-        );
-      } catch (error) {
-        console.error("Error processing transfer event:", error);
-      }
-    };
-
-
-    // Attach the event handler
-    providerIni.on(filter, this.transferEventHandler);
-    console.log("Transfer event listener started");
+      });
+  
+     } catch (error) {
+      console.error("Error processing transfer event:", error);
+     }
   }
 
 
