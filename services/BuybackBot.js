@@ -13,7 +13,12 @@ class BuybackBot {
 
     // Initialize Web3
     // this.web3 = new Web3(new Web3.providers.WebsocketProvider(config.rpcUrl));
-    this.web3 = new Web3(new Web3.providers.WebsocketProvider(config.rpcUrl));
+    // Create multiple provider instances
+    const providers = [
+      new Web3.providers.WebsocketProvider(config.rpcUrl),
+      new Web3.providers.HttpProvider(config.fallbackRpcUrl),
+    ];
+    this.web3 = new Web3(new Web3.providers.WebsocketProvider(providers));
     this.account = this.web3.eth.accounts.privateKeyToAccount(
       `0x${config.privateKey}`
     );
