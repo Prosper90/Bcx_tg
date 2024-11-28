@@ -83,6 +83,7 @@ app.get("/initiate_webhook_bot", async (req, res) => {
     const ngrokUrl = config.ngrok_url; // Use .env for the ngrok URL
     if (!ngrokUrl) {
       console.error("NGROK_URL is not set in .env");
+      return;
     }
     await setupWebhook(ngrokUrl);
   } catch (error) {

@@ -265,6 +265,7 @@ class BuybackBot {
      // Define the event handler function
      this.transferEventHandler = async (log) => {
       try {
+        console.log("happy  happy happy happy")
         const iface = new ethers.Interface(BcxABI);
         const decodedEvent = iface.parseLog(log);
         
