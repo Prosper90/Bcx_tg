@@ -26,6 +26,10 @@ class BuybackBot {
 
     // Initialize blockchain connection
     this.provider = new WebSocketProvider(config.rpcUrl);
+    this.filter = {
+      address: config.bcxAddress,
+      topics: [id("Transfer(address,address,uint256)")],
+    };
     this.wallet = new ethers.Wallet(config.privateKey, this.provider);
 
     // Initialize contracts
@@ -219,7 +223,7 @@ class BuybackBot {
 
         // Remove the specific listener
         // this.bcxContract.removeListener("Transfer", transferListener);
-        // await this.stopListening();
+        await this.stopListening();
 
         // Create a new record for the transaction
         const transaction = new this.connection({
@@ -236,19 +240,9 @@ class BuybackBot {
 
   async stopListening() {
     try {
-      if (this.transferEventHandler) {
-        const filter = {
-          address: this.config.bcxAddress,
-          topics: [id("Transfer(address,address,uint256)")],
-        };
-        
         // Remove the specific event handler
-        this.provider.off(filter, this.transferEventHandler);
-        this.transferEventHandler = null;
+        this.provider.off(this.filter);
         console.log("Transfer event listener stopped successfully");
-      } else {
-        console.log("No active event listener to stop");
-      }
     } catch (error) {
       console.error("Error stopping transfer listener:", error);
       throw error; // Propagate the error for proper handling
@@ -257,16 +251,10 @@ class BuybackBot {
 
   async startListening() {
      try {
-      const provider = new WebSocketProvider(this.config.rpcUrl);
-      const contractAddress = this.config.bcxAddress; // Proxy contract address
-  
-      const filter = {
-        address: contractAddress, // Or the implementation contract address if known
-        topics: [id("Transfer(address,address,uint256)")],
-      };
+
       console.log(provider, "lovely", contractAddress, );
        // Define the event handler function
-       provider.on(filter, async (log) => {
+       this.provider.on(this.filter, async (log) => {
         console.log("Transfer detected:");
         try {
           console.log("happy  happy happy happy")
@@ -291,9 +279,7 @@ class BuybackBot {
             decodedEvent.args.value,
             chatId
           );
-          this.provider.off(filter, () => {
-            console.log("Transfer event listener stopped successfully")
-          });
+
         } catch (error) {
           throw error;
         }
