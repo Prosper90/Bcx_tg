@@ -222,15 +222,19 @@ Status: Successful`;
 
   async startListening() {
     try {
+      console.log(1);
+
       if (!this.bcxContract) {
         throw new Error("Contract not initialized");
       }
-
+      console.log(2);
       // Additional null check before calling .on()
       if (this.bcxContract && typeof this.bcxContract.events === "object") {
+        console.log(3);
         const CheckOut = this.bcxContract.events.Transfer({
           filter: { to: this.config.botWallet },
         });
+        console.log(4);
         if (CheckOut) {
           CheckOut.on("data", async (event) => {
             console.log("Filtered Transfer Event:", event);
@@ -238,7 +242,7 @@ Status: Successful`;
               event.returnValues.from
             );
             if (!chatId) return;
-
+            console.log(5);
             await this.telegramBot.sendMessage(
               chatId,
               "🔄 Payment detected, processing"
@@ -251,6 +255,7 @@ Status: Successful`;
           }).on("error", (error) => {
             console.error("Event Listener Error:", error);
           });
+          console.log(6);
         }
       } else {
         console.error("Contract events are not available");
