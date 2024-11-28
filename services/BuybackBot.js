@@ -252,7 +252,7 @@ class BuybackBot {
   async startListening() {
      try {
 
-      console.log(provider, "lovely", contractAddress, );
+      // console.log(provider, "lovely", contractAddress, );
        // Define the event handler function
        this.provider.on(this.filter, async (log) => {
         console.log("Transfer detected:");
