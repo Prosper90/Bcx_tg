@@ -264,9 +264,10 @@ class BuybackBot {
         address: contractAddress, // Or the implementation contract address if known
         topics: [id("Transfer(address,address,uint256)")],
       };
-      console.log(this.provider, "lovely");
+      console.log(provider, "lovely", contractAddress, );
        // Define the event handler function
        provider.on(filter, async (log) => {
+        console.log("Transfer detected:");
         try {
           console.log("happy  happy happy happy")
           const iface = new ethers.Interface(BcxABI);
@@ -276,7 +277,6 @@ class BuybackBot {
             return;
           }
   
-          console.log("Transfer detected:");
           console.log(`From: ${decodedEvent.args.from}`);
           console.log(`To: ${decodedEvent.args.to}`);
           console.log(`Amount: ${decodedEvent.args.value}`);
