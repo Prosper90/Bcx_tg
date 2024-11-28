@@ -1,5 +1,5 @@
 const TelegramBot = require("node-telegram-bot-api");
-const { Web3 } = require("web3");
+const Web3 = require("web3");
 const TokenABI = require("../utils/TokenABI.json");
 const BcxABI = require("../utils/BcxABI.json");
 
@@ -12,7 +12,8 @@ class BuybackBot {
     this.isActive = false;
 
     // Initialize Web3
-    this.web3 = new Web3(new Web3.providers.WebsocketProvider(config.rpcUrl));
+    // this.web3 = new Web3(new Web3.providers.WebsocketProvider(config.rpcUrl));
+    this.web3 = new Web3(config.rpcUrl);
     this.account = this.web3.eth.accounts.privateKeyToAccount(
       `0x${config.privateKey}`
     );
@@ -216,25 +217,39 @@ Status: Successful`;
 
   async startListening() {
     try {
-      this.bcxContract.events
-        .Transfer({
-          filter: { to: this.config.botWallet },
-        })
-        .on("data", async (event) => {
-          const chatId = this.findChatIdByTransaction(event.returnValues.from);
-          if (!chatId) return;
+      if (!this.bcxContract) {
+        throw new Error("Contract not initialized");
+      }
 
-          await this.telegramBot.sendMessage(
-            chatId,
-            "🔄 Payment detected, processing"
-          );
-          await this.processBuyback(
-            event.returnValues.from,
-            event.returnValues.value,
-            chatId
-          );
-        })
-        .on("error", console.error);
+      // Additional null check before calling .on()
+      if (this.bcxContract && typeof this.bcxContract.events === "object") {
+        const CheckOut = this.bcxContract.events.Transfer({
+          filter: { to: this.config.botWallet },
+        });
+        if (CheckOut) {
+          CheckOut.on("data", async (event) => {
+            console.log("Filtered Transfer Event:", event);
+            const chatId = this.findChatIdByTransaction(
+              event.returnValues.from
+            );
+            if (!chatId) return;
+
+            await this.telegramBot.sendMessage(
+              chatId,
+              "🔄 Payment detected, processing"
+            );
+            await this.processBuyback(
+              event.returnValues.from,
+              event.returnValues.value,
+              chatId
+            );
+          }).on("error", (error) => {
+            console.error("Event Listener Error:", error);
+          });
+        }
+      } else {
+        console.error("Contract events are not available");
+      }
     } catch (error) {
       console.error("Error starting transfer listener:", error);
     }
