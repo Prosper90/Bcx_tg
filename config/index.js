@@ -13,6 +13,7 @@ const config = {
   ngrok_url: process.env.NGROK_URL,
   mongoUri: process.env.MONGODB_URI,
   implementationContract: process.env.BCX_IMPLEMENTATION,
+  fallbackRpcUrl: process.env.RpcUrlTwo,
   buybackConfig: {
     pricePerBcx: 0.5,
     maxSwapSize: 300,
