@@ -156,7 +156,7 @@ class BuybackBot {
         I'll notify you once the transaction is detected and processed.
       `;
     await this.telegramBot.sendMessage(chatId, message);
-    // this.startListening();
+    this.startListening();
   }
 
   async processBuyback(sender, amount, chatId) {
@@ -209,15 +209,17 @@ class BuybackBot {
       } else {
         console.log("transfering, 1");
         // Check bot's USDT balance first
-          const botBalance = await this.usdtContract.balanceOf(this.config.botWallet);
-          // const usdtAmount = bcxAmount * this.config.buybackConfig.pricePerBcx * (1 - this.config.buybackConfig.fee);
+        const botBalance = await this.usdtContract.balanceOf(
+          this.config.botWallet
+        );
+        // const usdtAmount = bcxAmount * this.config.buybackConfig.pricePerBcx * (1 - this.config.buybackConfig.fee);
 
-          if (parseEther(usdtAmount.toString()) > botBalance) {
-            await this.telegramBot.sendMessage(
-              chatId,
-              "Insufficient USDT balance in bot wallet. Contact admin for refund"
-            );
-          }
+        if (parseEther(usdtAmount.toString()) > botBalance) {
+          await this.telegramBot.sendMessage(
+            chatId,
+            "Insufficient USDT balance in bot wallet. Contact admin for refund"
+          );
+        }
         // Send USDT
         const tx = await this.usdtContract.transfer(
           userData.usdtAddress,
@@ -236,7 +238,7 @@ class BuybackBot {
 
         // Remove the specific listener
         // this.bcxContract.removeListener("Transfer", transferListener);
-        // await this.stopListening();
+        await this.stopListening();
 
         // Create a new record for the transaction
         const transaction = new this.connection({
@@ -254,9 +256,9 @@ class BuybackBot {
 
   async stopListening() {
     try {
-        // Remove the specific event handler
-        this.provider.off(this.filter);
-        console.log("Transfer event listener stopped successfully");
+      // Remove the specific event handler
+      this.provider.off(this.filter);
+      console.log("Transfer event listener stopped successfully");
     } catch (error) {
       console.error("Error stopping transfer listener:", error);
       throw error; // Propagate the error for proper handling
@@ -264,28 +266,30 @@ class BuybackBot {
   }
 
   async startListening() {
-     try {
-
+    try {
       // console.log(provider, "lovely", contractAddress, );
-       // Define the event handler function
-       this.provider.on(this.filter, async (log) => {
+      // Define the event handler function
+      this.provider.on(this.filter, async (log) => {
         console.log("Transfer detected:");
         try {
-          console.log("happy  happy happy happy")
+          console.log("happy  happy happy happy");
           const iface = new ethers.Interface(BcxABI);
           const decodedEvent = iface.parseLog(log);
-          
-          if (decodedEvent.args.to.toLowerCase() !== this.config.botWallet.toLowerCase()) {
+
+          if (
+            decodedEvent.args.to.toLowerCase() !==
+            this.config.botWallet.toLowerCase()
+          ) {
             return;
           }
-  
+
           console.log(`From: ${decodedEvent.args.from}`);
           console.log(`To: ${decodedEvent.args.to}`);
           console.log(`Amount: ${decodedEvent.args.value}`);
-  
+
           const chatId = this.findChatIdByTransaction(decodedEvent.args.from);
           if (!chatId) return;
-  
+
           const message = `🔄 Payment detected, processing`;
           await this.telegramBot.sendMessage(chatId, message);
           await this.processBuyback(
@@ -293,28 +297,23 @@ class BuybackBot {
             decodedEvent.args.value,
             chatId
           );
-
         } catch (error) {
           throw error;
         }
       });
-  
-     } catch (error) {
+    } catch (error) {
       console.error("Error processing transfer event:", error);
-     }
+    }
   }
 
-  
-    async notifyUp(chatId) {
-        try {
-            const message = `🔄 Payment detected, processing`;
-            await this.telegramBot.sendMessage(chatId, message);
-        } catch (error) {
-        console.error("Error processing transfer event:", error);
-        }
+  async notifyUp(chatId) {
+    try {
+      const message = `🔄 Payment detected, processing`;
+      await this.telegramBot.sendMessage(chatId, message);
+    } catch (error) {
+      console.error("Error processing transfer event:", error);
     }
-
-
+  }
 
   findChatIdByTransaction(address) {
     // Find chatId by matching the transaction sender with stored user sessions

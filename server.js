@@ -86,7 +86,6 @@ app.get("/disable_polling", (req, res) => {
   }
 });
 
-
 app.get("/initiate_webhook_bot", async (req, res) => {
   try {
     const ngrokUrl = config.ngrok_url; // Use .env for the ngrok URL
@@ -94,15 +93,15 @@ app.get("/initiate_webhook_bot", async (req, res) => {
       console.error("NGROK_URL is not set in .env");
       return;
     }
-   const dataDone = await setupWebhook(ngrokUrl);
+    const dataDone = await setupWebhook(ngrokUrl);
     console.log("done");
-    res.status(200).json({status: true, message: "connected", data: dataDone})
+    res
+      .status(200)
+      .json({ status: true, message: "connected", data: dataDone });
   } catch (error) {
     console.log(error);
   }
 });
-
-
 
 // Start server and optionally setup webhook
 const startServer = async () => {
@@ -115,63 +114,58 @@ const startServer = async () => {
   // Initialize BuybackBot with the Mongoose model
   const buybackBot = new BuybackBot(config, Transaction);
 
-  const provider = new WebSocketProvider(config.rpcUrl);
-  const contractAddress = config.bcxAddress; // Proxy contract address
+  // const provider = new WebSocketProvider(config.rpcUrl);
+  // const contractAddress = config.bcxAddress; // Proxy contract address
 
-    
-  // Add reconnection logic for WebSocket errors
-  provider.on("error", (error) => {
-    console.error("WebSocket error:", error);
-    provider._websocket?.terminate(); // Close the current WebSocket connection
-    provider.connect(); // Reconnect
-  
-    // Remove existing listeners to avoid duplicates
-    provider.removeAllListeners(filter);
-  
-    // Re-add the filter listener
-    provider.on(filter, handleTransferEvent);
-  });
+  // // Add reconnection logic for WebSocket errors
+  // provider.on("error", (error) => {
+  //   console.error("WebSocket error:", error);
+  //   provider._websocket?.terminate(); // Close the current WebSocket connection
+  //   provider.connect(); // Reconnect
 
-  const filter = {
-      address: contractAddress, // Or the implementation contract address if known
-      topics: [id("Transfer(address,address,uint256)")],
-  };
+  //   // Remove existing listeners to avoid duplicates
+  //   provider.removeAllListeners(filter);
 
-  console.log(provider, "checking the provider object")
+  //   // Re-add the filter listener
+  //   provider.on(filter, handleTransferEvent);
+  // });
 
-  const handleTransferEvent = async (log) => {
-    try {
-      console.log("Transfer detected:");
-      // Process the log as before
-      const iface = new ethers.Interface(BcxABI);
-        const decodedEvent = iface.parseLog(log);
+  // const filter = {
+  //     address: contractAddress, // Or the implementation contract address if known
+  //     topics: [id("Transfer(address,address,uint256)")],
+  // };
 
-        // Decode the event log using the implementation ABI
-        if (decodedEvent.args.to.toLowerCase() !== config.botWallet.toLowerCase()) {
-          return;
-        }
+  // console.log(provider, "checking the provider object")
 
+  // const handleTransferEvent = async (log) => {
+  //   try {
+  //     console.log("Transfer detected:");
+  //     // Process the log as before
+  //     const iface = new ethers.Interface(BcxABI);
+  //       const decodedEvent = iface.parseLog(log);
 
+  //       // Decode the event log using the implementation ABI
+  //       if (decodedEvent.args.to.toLowerCase() !== config.botWallet.toLowerCase()) {
+  //         return;
+  //       }
 
+  //      const chatId = await buybackBot.findChatIdByTransaction(decodedEvent.args.from);
+  //      if (!chatId) return;
 
-       const chatId = await buybackBot.findChatIdByTransaction(decodedEvent.args.from);
-       if (!chatId) return;
+  //      await buybackBot.notifyUp(chatId);
 
-       await buybackBot.notifyUp(chatId);
+  //       await buybackBot.processBuyback(
+  //         decodedEvent.args.from,
+  //         decodedEvent.args.value,
+  //         await buybackBot.findChatIdByTransaction(decodedEvent.args.from)
+  //       );
 
-        await buybackBot.processBuyback(
-          decodedEvent.args.from,
-          decodedEvent.args.value,
-          await buybackBot.findChatIdByTransaction(decodedEvent.args.from)
-        );
+  //   } catch (error) {
+  //     console.error("Error processing transfer event:", error);
+  //   }
+  // };
 
-    } catch (error) {
-      console.error("Error processing transfer event:", error);
-    }
-  };
-
-  provider.on(filter, handleTransferEvent);
-
+  // provider.on(filter, handleTransferEvent);
 
   app.listen(config.port, () => {
     console.log(`Server running on port ${config.port}`);
