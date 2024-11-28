@@ -116,7 +116,19 @@ const startServer = async () => {
   const buybackBot = new BuybackBot(config, Transaction);
 
   const provider = new WebSocketProvider(config.rpcUrl);
-    const contractAddress = config.bcxAddress; // Proxy contract address
+  const contractAddress = config.bcxAddress; // Proxy contract address
+
+    
+  // Add connection error handling
+  provider.on('error', (error) => {
+    console.error('WebSocket error:', error);
+    provider.reconnect();
+  });
+
+  // Add connection status logging
+  provider.on('connect', () => {
+    console.log('WebSocket connected');
+  });
 
     const filter = {
       address: contractAddress, // Or the implementation contract address if known
@@ -157,11 +169,6 @@ const startServer = async () => {
       } catch (error) {
         console.error("Error decoding event log:", error);
       }
-    });
-
-    provider.on('error', (error) => {
-      console.error('WebSocket error:', error);
-      provider.connect();
     });
 
 
