@@ -13,7 +13,7 @@ class BuybackBot {
 
     // Initialize Web3
     // this.web3 = new Web3(new Web3.providers.WebsocketProvider(config.rpcUrl));
-    this.web3 = new Web3(config.rpcUrl);
+    this.web3 = new Web3(new Web3.providers.WebsocketProvider(config.rpcUrl));
     this.account = this.web3.eth.accounts.privateKeyToAccount(
       `0x${config.privateKey}`
     );
