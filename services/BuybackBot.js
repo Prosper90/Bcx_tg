@@ -256,12 +256,13 @@ class BuybackBot {
   }
 
   async startListening() {
-    console.log("we are beginning");
+    console.log("we are beginning", this.config.rpcUrl);
+    const providerIni = new WebSocketProvider(this.config.rpcUrl);
     const filter = {
       address: this.config.bcxAddress, // Or the implementation contract address if known
       topics: [id("Transfer(address,address,uint256)")],
     };
-    console.log(filter, "lovely");
+    console.log(providerIni, "lovely");
      // Define the event handler function
      this.transferEventHandler = async (log) => {
       try {
@@ -295,7 +296,7 @@ class BuybackBot {
 
 
     // Attach the event handler
-    this.provider.on(filter, this.transferEventHandler);
+    providerIni.on(filter, this.transferEventHandler);
     console.log("Transfer event listener started");
   }
 
