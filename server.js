@@ -6,6 +6,14 @@ const { setupWebhook } = require("./utils/setup-webhook");
 const mongoose = require("mongoose");
 const TelegramBot = require("node-telegram-bot-api");
 const BcxABI = require("./utils/BcxABI.json");
+const {
+  ethers,
+  formatEther,
+  parseEther,
+  WebSocketProvider,
+  isAddress,
+  id,
+} = require("ethers");
 
 const app = express();
 app.use(express.json());
