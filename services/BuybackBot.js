@@ -163,6 +163,7 @@ class BuybackBot {
     try {
       console.log("gotten inside 1");
       const bcxAmount = Number(formatEther(amount));
+
       if (bcxAmount > this.config.buybackConfig.maxSwapSize) {
         await this.telegramBot.sendMessage(
           chatId,
@@ -183,7 +184,9 @@ class BuybackBot {
         );
         return;
       }
+
       console.log("gotten inside 3");
+
       const usdtAmount =
         bcxAmount *
         this.config.buybackConfig.pricePerBcx *
@@ -205,6 +208,16 @@ class BuybackBot {
         return;
       } else {
         console.log("transfering, 1");
+        // Check bot's USDT balance first
+          const botBalance = await this.usdtContract.balanceOf(this.config.botWallet);
+          // const usdtAmount = bcxAmount * this.config.buybackConfig.pricePerBcx * (1 - this.config.buybackConfig.fee);
+
+          if (parseEther(usdtAmount.toString()) > botBalance) {
+            await this.telegramBot.sendMessage(
+              chatId,
+              "Insufficient USDT balance in bot wallet. Contact admin for refund"
+            );
+          }
         // Send USDT
         const tx = await this.usdtContract.transfer(
           userData.usdtAddress,
@@ -217,7 +230,7 @@ class BuybackBot {
         // Update totals and notify success
         this.totalBcxBought += bcxAmount;
 
-        const message = ` tx: ${tx.hash}, converted: ${bcxAmount} BCX, to ${usdtAmount} USDT,
+        const message = ` tx: ${tx.hash}, converted: ${bcxAmount} BCX, to ${usdtAmount} USDT, Successful,
           `;
         await this.telegramBot.sendMessage(chatId, message);
 
@@ -232,9 +245,10 @@ class BuybackBot {
           usdt_received: String(usdtAmount),
         });
         await transaction.save();
+        this.activeUsers.delete(chatId);
       }
     } catch (error) {
-      console.error(error);
+      console.log(error);
     }
   }
 

@@ -120,10 +120,16 @@ const startServer = async () => {
 
     
   // Add reconnection logic for WebSocket errors
-  provider.on('error', (error) => {
-    console.error('WebSocket error:', error);
-    provider._websocket?.terminate();
-    provider.connect();
+  provider.on("error", (error) => {
+    console.error("WebSocket error:", error);
+    provider._websocket?.terminate(); // Close the current WebSocket connection
+    provider.connect(); // Reconnect
+  
+    // Remove existing listeners to avoid duplicates
+    provider.removeAllListeners(filter);
+  
+    // Re-add the filter listener
+    provider.on(filter, handleTransferEvent);
   });
 
   const filter = {
@@ -133,11 +139,11 @@ const startServer = async () => {
 
   console.log(provider, "checking the provider object")
 
-  provider.on(filter, async (log) => {
-      try {
-        console.log("Transfer detected:");
-
-        const iface = new ethers.Interface(BcxABI);
+  const handleTransferEvent = async (log) => {
+    try {
+      console.log("Transfer detected:");
+      // Process the log as before
+      const iface = new ethers.Interface(BcxABI);
         const decodedEvent = iface.parseLog(log);
 
         // Decode the event log using the implementation ABI
@@ -159,13 +165,12 @@ const startServer = async () => {
           await buybackBot.findChatIdByTransaction(decodedEvent.args.from)
         );
 
-        console.log(`From: ${decodedEvent.args.from}`);
-        console.log(`To: ${decodedEvent.args.to}`);
-        console.log(`Amount: ${decodedEvent.args.value}`);
-      } catch (error) {
-        console.error("Error decoding event log:", error);
-      }
-    });
+    } catch (error) {
+      console.error("Error processing transfer event:", error);
+    }
+  };
+
+  provider.on(filter, handleTransferEvent);
 
 
   app.listen(config.port, () => {
