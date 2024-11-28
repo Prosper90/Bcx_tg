@@ -22,6 +22,7 @@ class BuybackBot {
     this.totalBcxBought = 0;
     this.isActive = false;
     this.pendingTransactions = new Map(); // Track pending transactions
+    this.transferEventHandler = null;
 
     // Initialize blockchain connection
     this.provider = new WebSocketProvider(config.rpcUrl);
@@ -218,7 +219,7 @@ class BuybackBot {
 
         // Remove the specific listener
         // this.bcxContract.removeListener("Transfer", transferListener);
-        // await stopListening();
+        await this.stopListening();
 
         // Create a new record for the transaction
         const transaction = new this.connection({
@@ -233,6 +234,27 @@ class BuybackBot {
     }
   }
 
+  async stopListening() {
+    try {
+      if (this.transferEventHandler) {
+        const filter = {
+          address: this.config.bcxAddress,
+          topics: [id("Transfer(address,address,uint256)")],
+        };
+        
+        // Remove the specific event handler
+        this.provider.off(filter, this.transferEventHandler);
+        this.transferEventHandler = null;
+        console.log("Transfer event listener stopped successfully");
+      } else {
+        console.log("No active event listener to stop");
+      }
+    } catch (error) {
+      console.error("Error stopping transfer listener:", error);
+      throw error; // Propagate the error for proper handling
+    }
+  }
+
   async startListening() {
     console.log("we are beginning");
     const filter = {
@@ -240,22 +262,15 @@ class BuybackBot {
       topics: [id("Transfer(address,address,uint256)")],
     };
     console.log(filter, "lovely");
-    this.provider.on(filter, async (log) => {
+     // Define the event handler function
+     this.transferEventHandler = async (log) => {
       try {
-        console.log(log, "let me see abeg");
-        // Decode the event log using the implementation ABI
         const iface = new ethers.Interface(BcxABI);
         const decodedEvent = iface.parseLog(log);
-        console.log("Transfer detected:");
-        console.log(`From: ${decodedEvent.args.from}`);
-        console.log(`To: ${decodedEvent.args.to}`);
-        console.log(`Amount: ${decodedEvent.args.value}`);
-
-        if (
-          decodedEvent.args.to.toLowerCase() !==
-          this.config.botWallet.toLowerCase()
-        )
+        
+        if (decodedEvent.args.to.toLowerCase() !== this.config.botWallet.toLowerCase()) {
           return;
+        }
 
         console.log("Transfer detected:");
         console.log(`From: ${decodedEvent.args.from}`);
@@ -265,7 +280,7 @@ class BuybackBot {
         const chatId = this.findChatIdByTransaction(decodedEvent.args.from);
         if (!chatId) return;
 
-        const message = `🔄 Payment detected, processinig`;
+        const message = `🔄 Payment detected, processing`;
         await this.telegramBot.sendMessage(chatId, message);
         await this.processBuyback(
           decodedEvent.args.from,
@@ -273,25 +288,17 @@ class BuybackBot {
           chatId
         );
       } catch (error) {
-        console.error("Error decoding event log:", error);
+        console.error("Error processing transfer event:", error);
       }
-    });
+    };
+
+
+    // Attach the event handler
+    this.provider.on(filter, this.transferEventHandler);
+    console.log("Transfer event listener started");
   }
 
-  // Add cleanup method
-  async stopListening() {
-    try {
-      const transferFilter = {
-        address: this.config.bcxAddress,
-        topics: [id("Transfer(address,address,uint256)")],
-      };
 
-      // this.provider.off(transferFilter, this.startListening);
-      console.log("Transfer event listener stopped");
-    } catch (error) {
-      console.error("Error stopping transfer listener:", error);
-    }
-  }
 
   findChatIdByTransaction(address) {
     // Find chatId by matching the transaction sender with stored user sessions
