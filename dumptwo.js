@@ -1,9 +1,7 @@
 const TelegramBot = require("node-telegram-bot-api");
-const {Web3, WebSocketProvider} = require("web3");
+const Web3 = require("web3");
 const TokenABI = require("../utils/TokenABI.json");
 const BcxABI = require("../utils/BcxABI.json");
-// const { WebSocketProvider } = require("web3-providers-ws");
-
 
 class BuybackBot {
   constructor(config, connection) {
@@ -12,30 +10,29 @@ class BuybackBot {
     this.activeUsers = new Map();
     this.totalBcxBought = 0;
     this.isActive = false;
-    this.chain = config.chain || 'Unknown'; // Added chain identifier
 
-    // Initialize Web3 with WebSocket Provider
+    // Initialize Web3
+    // this.web3 = new Web3(new Web3.providers.WebsocketProvider(config.rpcUrl));
+    // Create multiple provider instances
     this.provider = new WebSocketProvider(
       config.rpcUrl,
       {},
       {
         autoReconnect: true,
-        delay: 10000,
-        maxAttempts: 10,
-      }
+        delay: 10000, // Default: 5000 ms
+        maxAttempts: 10, // Default: 5
+      },
     );
 
     this.provider.on('connect', () => {
-      console.log(`Connected to ${this.chain} websocket provider`);
+      console.log(`Connected to ${chain} websocket provider`);
     });
   
     this.provider.on('disconnect', error => {
-      console.error(`Closed ${this.chain} webSocket connection`, error);
+      console.error(`Closed ${chain} webSocket connection`, error);
     });
 
     this.web3 = new Web3(this.provider);
-    
-    // Create account from private key
     this.account = this.web3.eth.accounts.privateKeyToAccount(
       `0x${config.privateKey}`
     );
@@ -48,80 +45,38 @@ class BuybackBot {
       config.usdtAddress
     );
 
+    await this.subscribeToEvent(chain, this.bcxContract, 'Transfer');
+    // await subscribeToEvent(chain, contract, 'Approval');
+
     // Initialize Telegram bot
     this.telegramBot = new TelegramBot(config.telegramBotToken, {
       polling: true,
     });
-
-    // Setup bot commands and event subscriptions
     this.setupBotCommands();
-    this.setupEventSubscriptions();
   }
 
-  async setupEventSubscriptions() {
-    try {
-      // Subscribe to Transfer events for the bot's wallet
-      await this.subscribeToEvent(
-        this.chain, 
-        this.bcxContract, 
-        'Transfer', 
-        { to: this.config.botWallet }
-      );
-    } catch (error) {
-      console.error('Error setting up event subscriptions:', error);
-    }
-  }
 
-  async subscribeToEvent(chain, contract, eventName, filter = {}) {
-    try {
-      const subscription = contract.events[eventName]({ filter });
+  async subscribeToEvent(chain, contract, eventName) => {
+    const subscription = await contract.events[eventName]();
   
-      subscription.on('connected', subscriptionId => {
-        console.log(`${chain} BCX '${eventName}' SubID:`, subscriptionId);
-      });
+    subscription.on('connected', subscriptionId => {
+      console.log(`${chain} BCX '${eventName}' SubID:`, subscriptionId);
+    });
   
-      subscription.on('data', async (event) => {
-        // console.log(`${chain} BCX '${eventName}'`, JSON.stringify({ 
-        //   from: event.returnValues.from,
-        //   to: event.returnValues.to,
-        //   value: event.returnValues.value
-        // }));
-
-        console.log(event, "checking the event");
-
-        // Process buyback for transfers to bot wallet
-        if (event.returnValues.to.toLowerCase() === this.config.botWallet.toLowerCase()) {
-          const chatId = this.findChatIdByTransaction(
-            event.returnValues.from
-          );
-          if (!chatId) return;
-
-          await this.telegramBot.sendMessage(
-            chatId,
-            "🔄 Payment detected, processing"
-          );
-          await this.processBuyback(
-            event.returnValues.from,
-            event.returnValues.value,
-            chatId
-          );
-        }
-      });
+    subscription.on('data', event => {
+      console.log(`${chain} BCX '${eventName}'`, JSON.stringify({ event })); // cannot json.stringify BigInt...
+    });
   
-      subscription.on('changed', event => {
-        console.log("Removed event from local database:", event);
-      });
+    subscription.on('changed', event => {
+      // Remove event from local database
+      console.log("Remove from database")
+      
+    });
   
-      subscription.on('error', error => {
-        console.error(`${chain} BCX '${eventName}' error:`, error);
-      });
-
-      return subscription;
-    } catch (error) {
-      console.error(`Error subscribing to ${eventName} event:`, error);
-      throw error;
-    }
-  }
+    subscription.on('error', error => {
+      console.error(`${chain} BCX '${eventName}' error:`, error);
+    });
+  };
 
   setupBotCommands() {
     this.telegramBot.setMyCommands([
@@ -212,14 +167,14 @@ class BuybackBot {
       timestamp: Date.now(),
     });
 
-      const message = `
-  ✅ Your USDT address has been recorded: ${address}
-  You can now send your BCX to:
-  ${this.config.botWallet}
-  I'll notify you once the transaction is detected and processed.`;
+    const message = `
+✅ Your USDT address has been recorded: ${address}
+You can now send your BCX to:
+${this.config.botWallet}
+I'll notify you once the transaction is detected and processed.`;
 
-      await this.telegramBot.sendMessage(chatId, message);
-      // await this.startListening();
+    await this.telegramBot.sendMessage(chatId, message);
+    await this.startListening();
   }
 
   async processBuyback(sender, amount, chatId) {
@@ -283,8 +238,8 @@ class BuybackBot {
       this.totalBcxBought += bcxAmount;
 
       const message = `Transaction: ${tx.transactionHash}
-          Converted: ${bcxAmount} BCX to ${usdtAmount} USDT
-          Status: Successful`;
+Converted: ${bcxAmount} BCX to ${usdtAmount} USDT
+Status: Successful`;
 
       await this.telegramBot.sendMessage(chatId, message);
 
