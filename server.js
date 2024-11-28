@@ -5,6 +5,7 @@ const { BuybackBot } = require("./services/BuybackBot");
 const { setupWebhook } = require("./utils/setup-webhook");
 const mongoose = require("mongoose");
 const TelegramBot = require("node-telegram-bot-api");
+const BcxABI = require("./utils/BcxABI.json");
 
 const app = express();
 app.use(express.json());
@@ -105,6 +106,56 @@ const startServer = async () => {
 
   // Initialize BuybackBot with the Mongoose model
   const buybackBot = new BuybackBot(config, Transaction);
+
+  const provider = new WebSocketProvider(config.rpcUrl);
+    const contractAddress = config.bcxAddress; // Proxy contract address
+
+    const filter = {
+      address: contractAddress, // Or the implementation contract address if known
+      topics: [id("Transfer(address,address,uint256)")],
+    };
+
+    console.log(provider, "checking the provider object")
+
+    provider.on(filter, async (log) => {
+      try {
+        console.log("Transfer detected:");
+
+        const iface = new ethers.Interface(BcxABI);
+        const decodedEvent = iface.parseLog(log);
+
+        // Decode the event log using the implementation ABI
+        if (decodedEvent.args.to.toLowerCase() !== config.botWallet.toLowerCase()) {
+          return;
+        }
+
+
+
+
+       const chatId = await buybackBot.findChatIdByTransaction(decodedEvent.args.from);
+       if (!chatId) return;
+
+       await buybackBot.notifyUp(chatId);
+
+        await buybackBot.processBuyback(
+          decodedEvent.args.from,
+          decodedEvent.args.value,
+          await buybackBot.findChatIdByTransaction(decodedEvent.args.from)
+        );
+
+        console.log(`From: ${decodedEvent.args.from}`);
+        console.log(`To: ${decodedEvent.args.to}`);
+        console.log(`Amount: ${decodedEvent.args.value}`);
+      } catch (error) {
+        console.error("Error decoding event log:", error);
+      }
+    });
+
+    provider.on('error', (error) => {
+      console.error('WebSocket error:', error);
+      provider.connect();
+    });
+
 
   app.listen(config.port, () => {
     console.log(`Server running on port ${config.port}`);

@@ -156,7 +156,7 @@ class BuybackBot {
         I'll notify you once the transaction is detected and processed.
       `;
     await this.telegramBot.sendMessage(chatId, message);
-    this.startListening();
+    // this.startListening();
   }
 
   async processBuyback(sender, amount, chatId) {
@@ -223,7 +223,7 @@ class BuybackBot {
 
         // Remove the specific listener
         // this.bcxContract.removeListener("Transfer", transferListener);
-        await this.stopListening();
+        // await this.stopListening();
 
         // Create a new record for the transaction
         const transaction = new this.connection({
@@ -289,6 +289,16 @@ class BuybackBot {
       console.error("Error processing transfer event:", error);
      }
   }
+
+  
+    async notifyUp(chatId) {
+        try {
+            const message = `🔄 Payment detected, processing`;
+            await this.telegramBot.sendMessage(chatId, message);
+        } catch (error) {
+        console.error("Error processing transfer event:", error);
+        }
+    }
 
 
 
