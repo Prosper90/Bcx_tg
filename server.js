@@ -119,25 +119,21 @@ const startServer = async () => {
   const contractAddress = config.bcxAddress; // Proxy contract address
 
     
-  // Add connection error handling
+  // Add reconnection logic for WebSocket errors
   provider.on('error', (error) => {
     console.error('WebSocket error:', error);
-    provider.reconnect();
+    provider._websocket?.terminate();
+    provider.connect();
   });
 
-  // Add connection status logging
-  provider.on('connect', () => {
-    console.log('WebSocket connected');
-  });
-
-    const filter = {
+  const filter = {
       address: contractAddress, // Or the implementation contract address if known
       topics: [id("Transfer(address,address,uint256)")],
-    };
+  };
 
-    console.log(provider, "checking the provider object")
+  console.log(provider, "checking the provider object")
 
-    provider.on(filter, async (log) => {
+  provider.on(filter, async (log) => {
       try {
         console.log("Transfer detected:");
 
