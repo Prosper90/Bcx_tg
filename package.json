@@ -19,6 +19,6 @@
     "mongoose": "^8.8.2",
     "node-cron": "^3.0.3",
     "node-telegram-bot-api": "^0.66.0",
-    "web3": "^1.10.0"
+    "web3": "^1.10.4"
   }
 }

@@ -237,7 +237,7 @@ Status: Successful`;
         console.log(4);
         if (CheckOut) {
           CheckOut.on("data", async (event) => {
-            console.log("Filtered Transfer Event:", event);
+            // console.log("Filtered Transfer Event:", event);
             const chatId = this.findChatIdByTransaction(
               event.returnValues.from
             );
