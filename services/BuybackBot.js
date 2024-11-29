@@ -100,6 +100,14 @@ class BuybackBot {
             chatId,
             "🔄 Payment detected, processing"
           );
+
+             // Ensure `value` exists before passing it to `processBuyback`
+            if (!event.returnValues.value) {
+              console.error("Missing value in event:", event);
+              await this.telegramBot.sendMessage(chatId, "Error: Payment value missing in the event.");
+              return;
+            }
+
           await this.processBuyback(
             event.returnValues.from,
             event.returnValues.value,
@@ -222,37 +230,52 @@ class BuybackBot {
       // await this.startListening();
   }
 
-  async processBuyback(sender, amount, chatId) {
-    try {
-      const bcxAmount = Number(this.web3.utils.fromWei(amount));
+  async processBuyback(sender, amountConv, chatId) {
 
+
+    // Validate amount
+    // if (!amount || isNaN(amount)) {
+    //     console.error("Invalid amount received:", amount);
+    //     await this.telegramBot.sendMessage(
+    //         chatId,
+    //         "Error: Received invalid payment amount."
+    //     );
+    //     return;
+    // }
+
+  const amount = String(amountConv).replace(/n$/, '');
+
+    console.log(1);
+      // const bcxAmount = Number(this.web3.utils.fromWei(amount));
+    const bcxAmount = Number(amount) / 10**18; 
+      console.log(2, bcxAmount);
       if (bcxAmount > this.config.buybackConfig.maxSwapSize) {
         await this.telegramBot.sendMessage(
           chatId,
           "Exceeds maximum swap size, we would send back your BCX"
         );
-
+        console.log(3);
         const tx = await this.bcxContract.methods
           .transfer(sender, amount)
           .send({ from: this.account.address, gas: 200000 });
-
+          console.log(4);
         await this.telegramBot.sendMessage(
           chatId,
           "Your BCX has been sent back"
         );
         return;
       }
-
+      console.log(4);
       const usdtAmount =
         bcxAmount *
         this.config.buybackConfig.pricePerBcx *
         (1 - this.config.buybackConfig.fee);
       const userData = this.activeUsers.get(chatId);
-
+      console.log(6);
       const transactionCount = await this.connection.countDocuments({
         address: sender,
       });
-
+      console.log(7);
       if (transactionCount >= 5) {
         await this.telegramBot.sendMessage(
           chatId,
@@ -260,49 +283,43 @@ class BuybackBot {
         );
         return;
       }
-
+      console.log(9);
       const botBalance = await this.usdtContract.methods
         .balanceOf(this.config.botWallet)
         .call();
-
-      if (this.web3.utils.toWei(usdtAmount.toString()) > botBalance) {
+        console.log(10);
+      if ((usdtAmount * 10**18) > botBalance) {
         await this.telegramBot.sendMessage(
           chatId,
           "Insufficient USDT balance in bot wallet. Contact admin for refund"
         );
         return;
       }
-
+      console.log(11);
       const tx = await this.usdtContract.methods
         .transfer(
           userData.usdtAddress,
-          this.web3.utils.toWei(usdtAmount.toString())
+          (usdtAmount * 10**18)
         )
         .send({ from: this.account.address, gas: 200000 });
-
+        console.log(12);
       this.totalBcxBought += bcxAmount;
-
+      console.log(13);
       const message = `Transaction: ${tx.transactionHash}
-          Converted: ${bcxAmount} BCX to ${usdtAmount} USDT
-          Status: Successful`;
-
+        Converted: ${bcxAmount} BCX to ${usdtAmount} USDT
+        Status: Successful`;
+      console.log(14);
       await this.telegramBot.sendMessage(chatId, message);
-
+      console.log(15);
       const transaction = new this.connection({
         address: sender,
         bcx_sent: String(bcxAmount),
         usdt_received: String(usdtAmount),
       });
       await transaction.save();
-
+      console.log(16);
       this.activeUsers.delete(chatId);
-    } catch (error) {
-      console.error("Error processing buyback:", error);
-      await this.telegramBot.sendMessage(
-        chatId,
-        "Error processing transaction. Please contact support."
-      );
-    }
+     console.log(20);
   }
 
   async startListening() {
