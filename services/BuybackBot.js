@@ -261,10 +261,10 @@ class BuybackBot {
       return;
     }
     console.log(4);
-    const usdtAmount =
-      bcxAmount *
-      this.config.buybackConfig.pricePerBcx *
-      (1 - this.config.buybackConfig.fee);
+    // const usdtAmount =
+    //   bcxAmount *
+    //   this.config.buybackConfig.pricePerBcx *
+    //   (1 - this.config.buybackConfig.fee);
     const userData = this.activeUsers.get(chatId);
     console.log(6);
     const transactionCount = await this.connection.countDocuments({
@@ -274,7 +274,7 @@ class BuybackBot {
     if (transactionCount >= 5) {
       await this.telegramBot.sendMessage(
         chatId,
-        "You have passed your swap limit"
+        "You have passed your swap limit your bcx would be sent back to you"
       );
       return;
     }
@@ -284,9 +284,14 @@ class BuybackBot {
       .call();
     console.log(10);
     const OnebcxPrice = 0.148;
-    const bcxAmountToUsdt = usdtAmount * OnebcxPrice * 10 ** 18;
+    const bcxAmountToUsdt = bcxAmount * OnebcxPrice;
 
-    console.log(bcxAmountToUsdt, "lively doingssss");
+    const usdtAmount =
+      bcxAmountToUsdt *
+      this.config.buybackConfig.pricePerBcx *
+      (1 - this.config.buybackConfig.fee);
+
+    console.log(bcxAmountToUsdt, usdtAmount, "lively doingssss");
     if (bcxAmountToUsdt > botBalance) {
       await this.telegramBot.sendMessage(
         chatId,
@@ -295,9 +300,28 @@ class BuybackBot {
       return;
     }
     console.log(11);
+
+    // First estimate the gas to ensure the transaction is valid
+    // const gasEstimate = await this.usdtContract.methods
+    //   .transfer(userData.usdtAddress, usdtAmount * 10 ** 18)
+    //   .estimateGas({ from: this.account.address });
+
+    // // Add 20% buffer to gas estimate
+    // const gasLimit = Math.round(gasEstimate * 1.2);
+
     const tx = await this.usdtContract.methods
-      .transfer(userData.usdtAddress, usdtAmount * 10 ** 18)
+      .transfer(userData.usdtAddress, bcxAmountToUsdt * 10 ** 18)
       .send({ from: this.account.address, gas: 300000 });
+
+    // const tx = await this.usdtContract.methods
+    //   .transfer(userData.usdtAddress, usdtAmount * 10 ** 18)
+    //   .send({
+    //     from: this.account.address,
+    //     gas: gasLimit,
+    //     maxFeePerGas: null, // Let Web3 calculate this
+    //     maxPriorityFeePerGas: null, // Let Web3 calculate this
+    //   });
+
     console.log(12);
     this.totalBcxBought += bcxAmount;
     console.log(13);
