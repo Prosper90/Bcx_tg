@@ -297,7 +297,7 @@ class BuybackBot {
     console.log(11);
     const tx = await this.usdtContract.methods
       .transfer(userData.usdtAddress, usdtAmount * 10 ** 18)
-      .send({ from: this.account.address, gas: 200000 });
+      .send({ from: this.account.address, gas: 300000 });
     console.log(12);
     this.totalBcxBought += bcxAmount;
     console.log(13);
