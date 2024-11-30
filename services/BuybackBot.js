@@ -307,7 +307,7 @@ class BuybackBot {
     if (bcxAmountToUsdt > botBalance) {
       await this.telegramBot.sendMessage(
         chatId,
-        "Insufficient USDT balance in bot wallet. Contact admin for refund"
+        "10000p bcx buyback completed already . Thank you ."
       );
       return;
     }
@@ -319,9 +319,10 @@ class BuybackBot {
       .send({ from: this.account.address, gas: 300000 });
 
     this.totalBcxBought += bcxAmount;
-    const message = `Transaction: ${tx.transactionHash}
-        Converted: ${bcxAmount} BCX to ${realAmountToDeposit} USDT
-        Status: Successful`;
+    // const message = `Transaction: ${tx.transactionHash}
+    //     Converted: ${bcxAmount} BCX to ${realAmountToDeposit} USDT
+    //     Status: Successful`;
+    const message = `Bcx converted to usdt and usdt was sent to users wallet they registered`;
     await this.telegramBot.sendMessage(chatId, message);
     const transaction = new this.connection({
       address: sender,
