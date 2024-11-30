@@ -216,13 +216,8 @@ class BuybackBot {
   }
 
   async handleAddressSubmission(chatId, address) {
-    this.activeUsers.set(chatId, {
-      usdtAddress: address,
-      timestamp: Date.now(),
-    });
-
     const transactionCount = await this.connection.countDocuments({
-      address: sender,
+      address: address,
     });
 
     if (transactionCount >= 5) {
@@ -232,6 +227,11 @@ class BuybackBot {
       );
       return;
     }
+
+    this.activeUsers.set(chatId, {
+      usdtAddress: address,
+      timestamp: Date.now(),
+    });
 
     const message = `
   ✅ Your USDT address has been recorded: ${address}
