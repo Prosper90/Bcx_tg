@@ -12,6 +12,7 @@ class BuybackBot {
     this.totalBcxBought = 0;
     this.isActive = false;
     this.chain = config.chain || "Unknown"; // Added chain identifier
+    this.subscribeEventAwait = null;
 
     // Initialize Web3 with WebSocket Provider
     this.provider = new WebSocketProvider(
@@ -54,15 +55,20 @@ class BuybackBot {
 
     // Setup bot commands and event subscriptions
     this.setupBotCommands();
-    this.setupEventSubscriptions();
+    // this.setupEventSubscriptions();
   }
 
   async setupEventSubscriptions() {
     try {
       // Subscribe to Transfer events for the bot's wallet
-      await this.subscribeToEvent(this.chain, this.bcxContract, "Transfer", {
-        to: this.config.botWallet,
-      });
+      this.subscribeEventAwait = await this.subscribeToEvent(
+        this.chain,
+        this.bcxContract,
+        "Transfer",
+        {
+          to: this.config.botWallet,
+        }
+      );
     } catch (error) {
       console.error("Error setting up event subscriptions:", error);
     }
@@ -127,6 +133,35 @@ class BuybackBot {
       return subscription;
     } catch (error) {
       console.error(`Error subscribing to ${eventName} event:`, error);
+      throw error;
+    }
+  }
+
+  async unsubscribeFromEvent() {
+    try {
+      if (!this.subscribeEventAwait) {
+        console.warn("No subscription provided to unsubscribe from");
+        return;
+      }
+
+      // Remove all event listeners to prevent memory leaks
+      this.subscribeEventAwait.removeAllListeners("connected");
+      this.subscribeEventAwait.removeAllListeners("data");
+      this.subscribeEventAwait.removeAllListeners("changed");
+      this.subscribeEventAwait.removeAllListeners("error");
+
+      // Unsubscribe from the event
+      if (typeof this.subscribeEventAwait.unsubscribe === "function") {
+        await this.subscribeEventAwait.unsubscribe();
+        console.log("Successfully unsubscribed from event");
+      } else {
+        console.warn("Subscription does not have an unsubscribe method");
+      }
+
+      // Clear any internal references or state if needed
+      this.subscribeEventAwait = null;
+    } catch (error) {
+      console.error("Error unsubscribing from event:", error);
       throw error;
     }
   }
@@ -240,6 +275,7 @@ class BuybackBot {
   I'll notify you once the transaction is detected and processed.`;
 
     await this.telegramBot.sendMessage(chatId, message);
+    this.setupEventSubscriptions();
   }
 
   async processBuyback(sender, amountConv, chatId) {
