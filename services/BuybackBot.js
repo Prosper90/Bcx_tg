@@ -173,6 +173,7 @@ class BuybackBot {
     To sell your BCX:
     1. Share your de-centralized wallet address with me here
     2. Send your BCX to: ${this.config.botWallet}
+    3. Wait for transaction to finish. To swap again enter /start again. 
 
     Your transaction will be processed automatically and you'll receive notifications about the status.
 
@@ -220,6 +221,18 @@ class BuybackBot {
       timestamp: Date.now(),
     });
 
+    const transactionCount = await this.connection.countDocuments({
+      address: sender,
+    });
+
+    if (transactionCount >= 5) {
+      await this.telegramBot.sendMessage(
+        chatId,
+        "You have passed your swap limit"
+      );
+      return;
+    }
+
     const message = `
   ✅ Your USDT address has been recorded: ${address}
   You can now send your BCX to:
@@ -227,20 +240,9 @@ class BuybackBot {
   I'll notify you once the transaction is detected and processed.`;
 
     await this.telegramBot.sendMessage(chatId, message);
-    // await this.startListening();
   }
 
   async processBuyback(sender, amountConv, chatId) {
-    // Validate amount
-    // if (!amount || isNaN(amount)) {
-    //     console.error("Invalid amount received:", amount);
-    //     await this.telegramBot.sendMessage(
-    //         chatId,
-    //         "Error: Received invalid payment amount."
-    //     );
-    //     return;
-    // }
-
     const amount = String(amountConv).replace(/n$/, "");
 
     console.log(1);
@@ -261,37 +263,18 @@ class BuybackBot {
       return;
     }
     console.log(4);
-    // const usdtAmount =
-    //   bcxAmount *
-    //   this.config.buybackConfig.pricePerBcx *
-    //   (1 - this.config.buybackConfig.fee);
     const userData = this.activeUsers.get(chatId);
     console.log(6);
-    const transactionCount = await this.connection.countDocuments({
-      address: sender,
-    });
-    console.log(7);
-    if (transactionCount >= 5) {
-      await this.telegramBot.sendMessage(
-        chatId,
-        "You have passed your swap limit your bcx would be sent back to you"
-      );
-      return;
-    }
+
     console.log(9);
     const botBalance = await this.usdtContract.methods
       .balanceOf(this.config.botWallet)
       .call();
     console.log(10);
-    const OnebcxPrice = 0.148;
-    const bcxAmountToUsdt = bcxAmount * OnebcxPrice;
+    // const OnebcxPrice = 0.148;
+    const bcxAmountToUsdt = bcxAmount * this.config.buybackConfig.pricePerBcx;
 
-    const usdtAmount =
-      bcxAmountToUsdt *
-      this.config.buybackConfig.pricePerBcx *
-      (1 - this.config.buybackConfig.fee);
-
-    console.log(bcxAmountToUsdt, usdtAmount, "lively doingssss");
+    console.log(bcxAmountToUsdt, "lively doingssss");
     if (bcxAmountToUsdt > botBalance) {
       await this.telegramBot.sendMessage(
         chatId,
@@ -301,32 +284,17 @@ class BuybackBot {
     }
     console.log(11);
 
-    // First estimate the gas to ensure the transaction is valid
-    // const gasEstimate = await this.usdtContract.methods
-    //   .transfer(userData.usdtAddress, usdtAmount * 10 ** 18)
-    //   .estimateGas({ from: this.account.address });
-
-    // // Add 20% buffer to gas estimate
-    // const gasLimit = Math.round(gasEstimate * 1.2);
+    const realAmountToDeposit = bcxAmountToUsdt - (bcxAmountToUsdt * 2) / 100;
 
     const tx = await this.usdtContract.methods
-      .transfer(userData.usdtAddress, bcxAmountToUsdt * 10 ** 18)
+      .transfer(userData.usdtAddress, realAmountToDeposit * 10 ** 18)
       .send({ from: this.account.address, gas: 300000 });
-
-    // const tx = await this.usdtContract.methods
-    //   .transfer(userData.usdtAddress, usdtAmount * 10 ** 18)
-    //   .send({
-    //     from: this.account.address,
-    //     gas: gasLimit,
-    //     maxFeePerGas: null, // Let Web3 calculate this
-    //     maxPriorityFeePerGas: null, // Let Web3 calculate this
-    //   });
 
     console.log(12);
     this.totalBcxBought += bcxAmount;
     console.log(13);
     const message = `Transaction: ${tx.transactionHash}
-        Converted: ${bcxAmount} BCX to ${usdtAmount} USDT
+        Converted: ${bcxAmount} BCX to ${bcxAmountToUsdt} USDT
         Status: Successful`;
     console.log(14);
     await this.telegramBot.sendMessage(chatId, message);
@@ -334,7 +302,7 @@ class BuybackBot {
     const transaction = new this.connection({
       address: sender,
       bcx_sent: String(bcxAmount),
-      usdt_received: String(usdtAmount),
+      usdt_received: String(bcxAmountToUsdt),
     });
     await transaction.save();
     console.log(16);
