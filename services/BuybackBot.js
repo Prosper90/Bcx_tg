@@ -119,6 +119,8 @@ class BuybackBot {
             event.returnValues.value,
             chatId
           );
+
+          this.unsubscribeFromEvent();
         }
       });
 
