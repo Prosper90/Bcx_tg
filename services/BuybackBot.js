@@ -245,36 +245,27 @@ class BuybackBot {
   async processBuyback(sender, amountConv, chatId) {
     const amount = String(amountConv).replace(/n$/, "");
 
-    console.log(1);
     // const bcxAmount = Number(this.web3.utils.fromWei(amount));
     const bcxAmount = Number(amount) / 10 ** 18;
-    console.log(2, bcxAmount);
     if (bcxAmount > this.config.buybackConfig.maxSwapSize) {
       await this.telegramBot.sendMessage(
         chatId,
         "100000 bcx has been bought back already, we would send back your BCX"
       );
-      console.log(3);
       const tx = await this.bcxContract.methods
         .transfer(sender, amount)
         .send({ from: this.account.address, gas: 200000 });
-      console.log(4);
       await this.telegramBot.sendMessage(chatId, "Your BCX has been sent back");
       return;
     }
-    console.log(4);
     const userData = this.activeUsers.get(chatId);
-    console.log(6);
 
-    console.log(9);
     const botBalance = await this.usdtContract.methods
       .balanceOf(this.config.botWallet)
       .call();
-    console.log(10);
     // const OnebcxPrice = 0.148;
     const bcxAmountToUsdt = bcxAmount * this.config.buybackConfig.pricePerBcx;
 
-    console.log(bcxAmountToUsdt, "lively doingssss");
     if (bcxAmountToUsdt > botBalance) {
       await this.telegramBot.sendMessage(
         chatId,
@@ -282,7 +273,6 @@ class BuybackBot {
       );
       return;
     }
-    console.log(11);
 
     const realAmountToDeposit = bcxAmountToUsdt - (bcxAmountToUsdt * 2) / 100;
 
@@ -290,24 +280,18 @@ class BuybackBot {
       .transfer(userData.usdtAddress, realAmountToDeposit * 10 ** 18)
       .send({ from: this.account.address, gas: 300000 });
 
-    console.log(12);
     this.totalBcxBought += bcxAmount;
-    console.log(13);
     const message = `Transaction: ${tx.transactionHash}
-        Converted: ${bcxAmount} BCX to ${bcxAmountToUsdt} USDT
+        Converted: ${bcxAmount} BCX to ${realAmountToDeposit} USDT
         Status: Successful`;
-    console.log(14);
     await this.telegramBot.sendMessage(chatId, message);
-    console.log(15);
     const transaction = new this.connection({
       address: sender,
       bcx_sent: String(bcxAmount),
       usdt_received: String(bcxAmountToUsdt),
     });
     await transaction.save();
-    console.log(16);
     this.activeUsers.delete(chatId);
-    console.log(20);
   }
 
   async startListening() {
@@ -317,14 +301,11 @@ class BuybackBot {
       if (!this.bcxContract) {
         throw new Error("Contract not initialized");
       }
-      console.log(2);
       // Additional null check before calling .on()
       if (this.bcxContract && typeof this.bcxContract.events === "object") {
-        console.log(3);
         const CheckOut = this.bcxContract.events.Transfer({
           filter: { to: this.config.botWallet },
         });
-        console.log(4);
         if (CheckOut) {
           CheckOut.on("data", async (event) => {
             console.log("Filtered Transfer Event:", event);
@@ -332,7 +313,6 @@ class BuybackBot {
               event.returnValues.from
             );
             if (!chatId) return;
-            console.log(5);
             await this.telegramBot.sendMessage(
               chatId,
               "🔄 Payment detected, processing"
@@ -345,7 +325,6 @@ class BuybackBot {
           }).on("error", (error) => {
             console.error("Event Listener Error:", error);
           });
-          console.log(6);
         }
       } else {
         console.error("Contract events are not available");
