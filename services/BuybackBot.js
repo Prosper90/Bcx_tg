@@ -303,11 +303,12 @@ class BuybackBot {
       .call();
     // const OnebcxPrice = 0.148;
     const bcxAmountToUsdt = bcxAmount * this.config.buybackConfig.pricePerBcx;
-
+    console.log(bcxAmountToUsdt, botBalance, "invalidation");
     if (bcxAmountToUsdt > botBalance) {
+      console.log("We are here in completely");
       await this.telegramBot.sendMessage(
         chatId,
-        "10000p bcx buyback completed already . Thank you ."
+        "10000 bcx buyback completed already . Thank you"
       );
       return;
     }
