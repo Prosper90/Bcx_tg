@@ -214,7 +214,8 @@ class BuybackBot {
 
     Your transaction will be processed automatically and you'll receive notifications about the status.
 
-    Use /info to see bcx buyback info.
+    Use /info to see bcx buyback info. 
+    ** For out of range BCX amounts , the BCX will not be returned.
 `;
     await this.telegramBot.sendMessage(chatId, message);
   }
