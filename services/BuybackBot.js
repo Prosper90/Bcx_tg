@@ -309,7 +309,7 @@ class BuybackBot {
       console.log("We are here in completely");
       await this.telegramBot.sendMessage(
         chatId,
-        "10000 bcx buyback completed already . Thank you"
+        "100000 bcx buyback completed already . Thank you"
       );
       return;
     }
