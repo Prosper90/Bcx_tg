@@ -237,12 +237,14 @@ class BuybackBot {
       const remainingBcx =
         this.config.buybackConfig.totalBcxLimit - totalBcxBought;
 
-      const message = `
-📊 Current Buyback Status:
-• Total BCX Bought: ${totalBcxBought}
-• Remaining BCX: ${remainingBcx}
-• Current Price: $${this.config.buybackConfig.pricePerBcx}
-• Maximum Transaction: ${this.config.buybackConfig.maxSwapSize} BCX`;
+//       const message = `
+// 📊 Current Buyback Status:
+// • Total BCX Bought: ${totalBcxBought}
+// • Remaining BCX: ${remainingBcx}
+// • Current Price: $${this.config.buybackConfig.pricePerBcx}
+// • Maximum Transaction: ${this.config.buybackConfig.maxSwapSize} BCX`;
+
+      const message = `📊 BCX buy back is under way. Bot will stop working once 100000 BCX are baught`
 
       await this.telegramBot.sendMessage(chatId, message);
     } catch (error) {
