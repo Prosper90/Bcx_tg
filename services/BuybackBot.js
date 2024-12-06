@@ -205,6 +205,7 @@ class BuybackBot {
     Current Conditions:
     • Price: $${this.config.buybackConfig.pricePerBcx} per BCX
     • Maximum swap: ${this.config.buybackConfig.maxSwapSize} BCX
+    • Mininum swap : 25 BCX 
     • Fee: ${this.config.buybackConfig.fee * 100}%
 
     To sell your BCX:
@@ -286,17 +287,23 @@ class BuybackBot {
 
     // const bcxAmount = Number(this.web3.utils.fromWei(amount));
     const bcxAmount = Number(amount) / 10 ** 18;
+    if(bcxAmount < 25) {
+      await this.telegramBot.sendMessage(chatId, "Invalid transaction range,  bcx sent shall be forfeit");
+      return;
+    };
+
     if (bcxAmount > this.config.buybackConfig.maxSwapSize) {
       await this.telegramBot.sendMessage(
         chatId,
         "100000 bcx has been bought back already, we would send back your BCX"
       );
-      const tx = await this.bcxContract.methods
-        .transfer(sender, amount)
-        .send({ from: this.account.address, gas: 200000 });
-      await this.telegramBot.sendMessage(chatId, "Your BCX has been sent back");
+      // const tx = await this.bcxContract.methods
+      //   .transfer(sender, amount)
+      //   .send({ from: this.account.address, gas: 200000 });
+      // await this.telegramBot.sendMessage(chatId, "Your BCX has been sent back");
       return;
     }
+    
     const userData = this.activeUsers.get(chatId);
 
     const botBalance = await this.usdtContract.methods
